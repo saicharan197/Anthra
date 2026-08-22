@@ -1,15 +1,6 @@
-"""
-Dayflow HRMS — Leave Requests Router
-
-Endpoints:
-  POST  /api/leave/apply        — Submit a new leave request (Pending).
-  GET   /api/leave/all          — Role-scoped leave listing.
-  PATCH /api/leave/{id}/status  — Admin: approve / reject a request.
-"""
-
 from fastapi import APIRouter, Depends, HTTPException, status
 
-from app.database import supabase
+from app.database import get_supabase, supabase
 from app.dependencies import get_current_user, require_admin
 from app.models.leave import LeaveApplyRequest, LeaveStatusUpdate, LeaveOut
 
@@ -19,10 +10,16 @@ router = APIRouter(prefix="/leave", tags=["Leave Management"])
 # ─── APPLY FOR LEAVE ─────────────────────────────────────────────────
 
 @router.post(
-    "/apply",
+    "",
     response_model=LeaveOut,
     status_code=status.HTTP_201_CREATED,
     summary="Submit a new leave request",
+)
+@router.post(
+    "/apply",
+    response_model=LeaveOut,
+    status_code=status.HTTP_201_CREATED,
+    include_in_schema=False,
 )
 async def apply_leave(
     body: LeaveApplyRequest,
@@ -38,9 +35,11 @@ async def apply_leave(
             detail="end_date must be on or after start_date.",
         )
 
+    client = get_supabase(current_user.get("_token"))
+
     # Fetch existing leaves for this user to check overlap
     existing = (
-        supabase.table("leave_requests")
+        client.table("leave_requests")
         .select("*")
         .eq("employee_id", current_user["id"])
         .execute()
@@ -58,7 +57,7 @@ async def apply_leave(
         )
 
     response = (
-        supabase.table("leave_requests")
+        client.table("leave_requests")
         .insert(
             {
                 "employee_id": current_user["id"],
@@ -84,9 +83,14 @@ async def apply_leave(
 # ─── LIST LEAVE REQUESTS ────────────────────────────────────────────
 
 @router.get(
-    "/all",
+    "",
     response_model=list[LeaveOut],
     summary="List leave requests (role-scoped)",
+)
+@router.get(
+    "/all",
+    response_model=list[LeaveOut],
+    include_in_schema=False,
 )
 async def list_leaves(
     current_user: dict = Depends(get_current_user),
@@ -95,7 +99,8 @@ async def list_leaves(
     - **Employees** see only their own leave requests.
     - **Admins** see all leave requests across the organisation.
     """
-    query = supabase.table("leave_requests").select("*")
+    client = get_supabase(current_user.get("_token"))
+    query = client.table("leave_requests").select("*")
 
     if current_user.get("role") != "admin":
         query = query.eq("employee_id", current_user["id"])
@@ -121,12 +126,13 @@ async def update_leave_status(
     Admin-only. Transitions a leave request from Pending to
     Approved or Rejected, with optional review comments.
     """
+    client = get_supabase(_admin.get("_token"))
     update_data: dict = {"status": body.status}
     if body.admin_comments is not None:
         update_data["admin_comments"] = body.admin_comments
 
     response = (
-        supabase.table("leave_requests")
+        client.table("leave_requests")
         .update(update_data)
         .eq("id", leave_id)
         .execute()
@@ -139,3 +145,4 @@ async def update_leave_status(
         )
 
     return response.data[0]
+

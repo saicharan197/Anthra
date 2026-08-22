@@ -2,9 +2,10 @@
 // Dayflow HRMS — Central API Client
 // ============================================================
 
-export const API_BASE = window.location.origin.includes('localhost:3000')
-  ? 'http://localhost:8000/api'
+export const API_BASE = (window.location.port && window.location.port !== '8000')
+  ? `http://${window.location.hostname || '127.0.0.1'}:8000/api`
   : '/api';
+
 
 /**
  * Returns authorization and standard content headers.

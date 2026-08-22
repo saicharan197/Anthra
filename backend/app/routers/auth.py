@@ -8,7 +8,7 @@ Endpoints:
 
 from fastapi import APIRouter, HTTPException, status
 
-from app.database import supabase
+from app.database import get_supabase, supabase
 from app.models.auth import SignUpRequest, SignInRequest, AuthResponse
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
@@ -57,16 +57,19 @@ async def signup(body: SignUpRequest):
             detail="Signup failed: no user returned. Email may already be registered.",
         )
 
-    # Update the employee_id in profiles (trigger only sets full_name & role)
+    token = session.access_token if session else ""
+    client = get_supabase(token) if token else supabase
+
+    # Update the employee_id in profiles
     try:
-        supabase.table("profiles").update(
+        client.table("profiles").update(
             {"employee_id": body.employee_id}
         ).eq("id", str(user.id)).execute()
     except Exception:
         pass  # Non-critical; admin can set later
 
     return AuthResponse(
-        access_token=session.access_token if session else "",
+        access_token=token,
         user={
             "id": str(user.id),
             "email": user.email,
@@ -107,34 +110,43 @@ async def signin(body: SignInRequest):
             detail="Authentication failed: no session returned.",
         )
 
-    # Fetch the full profile for the response
-    profile_resp = (
-        supabase.table("profiles")
-        .select("*")
-        .eq("id", str(user.id))
-        .maybe_single()
-        .execute()
-    )
-    # Fetch the full profile for the response
+    # Fetch the full profile for the response using authenticated client
+    client = get_supabase(session.access_token)
     profile_data = {}
     try:
         profile_resp = (
-            supabase.table("profiles")
+            client.table("profiles")
             .select("*")
             .eq("id", str(user.id))
+            .maybe_single()
             .execute()
         )
         if profile_resp and profile_resp.data:
-            profile_data = profile_resp.data[0]
+            profile_data = profile_resp.data
     except Exception:
-        profile_data = {}
+        try:
+            profile_resp = (
+                supabase.table("profiles")
+                .select("*")
+                .eq("id", str(user.id))
+                .maybe_single()
+                .execute()
+            )
+            if profile_resp and profile_resp.data:
+                profile_data = profile_resp.data
+        except Exception:
+            profile_data = {}
+
+    user_meta = getattr(user, "user_metadata", {}) or {}
+    role = profile_data.get("role") or user_meta.get("role", "employee")
+    full_name = profile_data.get("full_name") or user_meta.get("full_name", body.email.split("@")[0])
 
     return AuthResponse(
         access_token=session.access_token,
         user={
             "id": str(user.id),
             "email": user.email,
-            "role": profile_data.get("role", "employee"),
-            "full_name": profile_data.get("full_name", body.email.split("@")[0]),
+            "role": role,
+            "full_name": full_name,
         },
     )

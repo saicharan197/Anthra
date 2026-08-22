@@ -11,7 +11,7 @@ from datetime import date, datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
-from app.database import supabase
+from app.database import get_supabase, supabase
 from app.dependencies import get_current_user, require_admin
 from app.models.payroll import PayrollStructureIn, PayrollStructureOut, PayslipOut
 
@@ -48,9 +48,11 @@ async def get_payslip(
             detail="You can only view your own payslip.",
         )
 
+    client = get_supabase(current_user.get("_token"))
+
     # ── 1. Fetch payroll structure ──────────────────────────────────
     structure_resp = (
-        supabase.table("payroll_structures")
+        client.table("payroll_structures")
         .select("*")
         .eq("employee_id", employee_id)
         .maybe_single()
@@ -65,7 +67,7 @@ async def get_payslip(
 
     # ── 2. Fetch employee name ──────────────────────────────────────
     profile_resp = (
-        supabase.table("profiles")
+        client.table("profiles")
         .select("full_name")
         .eq("id", employee_id)
         .maybe_single()
@@ -75,12 +77,11 @@ async def get_payslip(
 
     # ── 3. Determine current month boundaries ──────────────────────
     today = datetime.now(timezone.utc).date()
-    import calendar
     last_day = today.replace(day=calendar.monthrange(today.year, today.month)[1])
 
     # ── 4. Fetch all attendance & approved leaves ───────────────────
     attendance_resp = (
-        supabase.table("attendance")
+        client.table("attendance")
         .select("date, status")
         .eq("employee_id", employee_id)
         .gte("date", today.replace(day=1).isoformat())
@@ -89,7 +90,7 @@ async def get_payslip(
     )
     
     leave_resp = (
-        supabase.table("leave_requests")
+        client.table("leave_requests")
         .select("start_date, end_date, leave_type, status")
         .eq("employee_id", employee_id)
         .eq("status", "Approved")
@@ -139,8 +140,9 @@ async def upsert_payroll_structure(
     Creates or updates the payroll structure for the given employee.
     Uses upsert on the UNIQUE(employee_id) constraint.
     """
+    client = get_supabase(_admin.get("_token"))
     response = (
-        supabase.table("payroll_structures")
+        client.table("payroll_structures")
         .upsert(
             {
                 "employee_id": employee_id,
@@ -186,7 +188,8 @@ async def list_all_structures(_admin: dict = Depends(require_admin)):
     """
     Returns all payroll structures. Admin only.
     """
-    response = supabase.table("payroll_structures").select("*").execute()
+    client = get_supabase(_admin.get("_token"))
+    response = client.table("payroll_structures").select("*").execute()
     return response.data or []
 
 
@@ -211,8 +214,9 @@ async def get_payroll_structure(
             detail="You can only view your own payroll structure.",
         )
 
+    client = get_supabase(current_user.get("_token"))
     response = (
-        supabase.table("payroll_structures")
+        client.table("payroll_structures")
         .select("*")
         .eq("employee_id", employee_id)
         .maybe_single()
@@ -224,4 +228,5 @@ async def get_payroll_structure(
             detail="Payroll structure not found.",
         )
     return response.data
+
 

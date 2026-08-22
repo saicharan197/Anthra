@@ -9,7 +9,7 @@ Endpoints:
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
-from app.database import supabase
+from app.database import get_supabase, supabase
 from app.dependencies import get_current_user, require_admin
 from app.models.profile import ProfileOut, ProfileUpdateSelf, ProfileUpdateAdmin
 
@@ -49,8 +49,9 @@ async def update_my_profile(
             detail="No fields provided for update.",
         )
 
+    client = get_supabase(current_user.get("_token"))
     response = (
-        supabase.table("profiles")
+        client.table("profiles")
         .update(update_data)
         .eq("id", current_user["id"])
         .execute()
@@ -88,8 +89,9 @@ async def update_profile_admin(
             detail="No fields provided for update.",
         )
 
+    client = get_supabase(_admin.get("_token"))
     response = (
-        supabase.table("profiles")
+        client.table("profiles")
         .update(update_data)
         .eq("id", profile_id)
         .execute()
@@ -115,6 +117,8 @@ async def list_all_profiles(_admin: dict = Depends(require_admin)):
     """
     Returns a list of all employee profiles. Admin only.
     """
-    response = supabase.table("profiles").select("*").execute()
+    client = get_supabase(_admin.get("_token"))
+    response = client.table("profiles").select("*").execute()
     return response.data or []
+
 

@@ -4,6 +4,7 @@
 
 import { getPendingQueue, removeSyncedAction } from './offline-db.js';
 import { showToast } from './ui.js';
+import { apiRequest } from './api.js';
 
 let _onSyncCompleteCallbacks = [];
 
@@ -77,21 +78,12 @@ export async function processSyncQueue() {
 
     console.log('Syncing pending actions to backend:', payload);
 
-    // Perform actual API sync call
-    const response = await fetch('/api/sync', {
+    // Perform actual API sync call with authenticated Bearer token
+    const data = await apiRequest('/sync', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-        // In real app, attach bearer token header if needed
-      },
       body: JSON.stringify(payload)
     });
 
-    if (!response.ok) {
-      throw new Error(`Sync server responded with ${response.status} ${response.statusText}`);
-    }
-
-    const data = await response.json();
     console.log('Sync complete. Server response:', data);
 
     // Delete successfully synced items from IndexedDB

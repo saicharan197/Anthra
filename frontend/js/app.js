@@ -61,27 +61,35 @@ function _bindAuthEvents() {
   });
 
   // Sign In
-  document.getElementById('form-signin').addEventListener('submit', (e) => {
+  document.getElementById('form-signin').addEventListener('submit', async (e) => {
     e.preventDefault();
     const email = document.getElementById('signin-email').value;
     const password = document.getElementById('signin-password').value;
-    signIn(email, password);
-    _enterApp();
-    showToast('Welcome back!', 'success');
+    try {
+      await signIn(email, password);
+      _enterApp();
+      showToast('Welcome back!', 'success');
+    } catch (err) {
+      showToast(err.message || 'Login failed', 'error');
+    }
   });
 
   // Sign Up
-  document.getElementById('form-signup').addEventListener('submit', (e) => {
+  document.getElementById('form-signup').addEventListener('submit', async (e) => {
     e.preventDefault();
-    signUp({
-      employee_id: document.getElementById('signup-empid').value,
-      full_name: document.getElementById('signup-name').value,
-      email: document.getElementById('signup-email').value,
-      password: document.getElementById('signup-password').value,
-      role: document.getElementById('signup-role').value,
-    });
-    _enterApp();
-    showToast('Account created successfully!', 'success');
+    try {
+      await signUp({
+        employee_id: document.getElementById('signup-empid').value,
+        full_name: document.getElementById('signup-name').value,
+        email: document.getElementById('signup-email').value,
+        password: document.getElementById('signup-password').value,
+        role: document.getElementById('signup-role').value,
+      });
+      _enterApp();
+      showToast('Account created successfully!', 'success');
+    } catch (err) {
+      showToast(err.message || 'Sign up failed', 'error');
+    }
   });
 
   // Sign Out
@@ -124,6 +132,18 @@ export function navigateTo(view) {
   _currentView = view;
   const container = document.getElementById('main-content') || document.querySelector('main');
   if (!container) return;
+
+  // Update active nav
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  const activeNav = document.querySelector(`.nav-item[data-view="${view}"]`);
+  if (activeNav) activeNav.classList.add('active');
+
+  // Update topbar title
+  const titles = { dashboard: 'Dashboard', attendance: 'Attendance', leave: 'Leave Management', payroll: 'Payroll', profile: 'Profile' };
+  const titleEl = document.getElementById('view-title');
+  if (titleEl) titleEl.textContent = titles[view] || view;
+
+  _applyRoleClass();
 
   // Handles DOM mounting from templates directly
   switch (view) {

@@ -12,7 +12,7 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
-from app.database import supabase
+from app.database import get_supabase, supabase
 from app.dependencies import get_current_user
 from app.models.attendance import AttendanceOut
 
@@ -36,10 +36,11 @@ async def check_in(current_user: dict = Depends(get_current_user)):
     now = datetime.now(timezone.utc)
     today = now.date().isoformat()
     employee_id = current_user["id"]
+    client = get_supabase(current_user.get("_token"))
 
     # Upsert: insert or update on conflict (employee_id, date)
     response = (
-        supabase.table("attendance")
+        client.table("attendance")
         .upsert(
             {
                 "employee_id": employee_id,
@@ -76,10 +77,11 @@ async def check_out(current_user: dict = Depends(get_current_user)):
     now = datetime.now(timezone.utc)
     today = now.date().isoformat()
     employee_id = current_user["id"]
+    client = get_supabase(current_user.get("_token"))
 
     # Find today's attendance record
     existing = (
-        supabase.table("attendance")
+        client.table("attendance")
         .select("*")
         .eq("employee_id", employee_id)
         .eq("date", today)
@@ -101,7 +103,7 @@ async def check_out(current_user: dict = Depends(get_current_user)):
 
     # Update with check-out time and status
     response = (
-        supabase.table("attendance")
+        client.table("attendance")
         .update({
             "check_out_time": now.isoformat(),
             "status": status_str
@@ -137,8 +139,9 @@ async def list_attendance(
     - **Admins** can optionally filter by employee_id and date range.
     """
     is_admin = current_user.get("role") == "admin"
+    client = get_supabase(current_user.get("_token"))
 
-    query = supabase.table("attendance").select("*")
+    query = client.table("attendance").select("*")
 
     if is_admin:
         if employee_id:

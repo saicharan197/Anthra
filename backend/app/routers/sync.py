@@ -13,7 +13,7 @@ from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, status
 
-from app.database import supabase
+from app.database import get_supabase, supabase
 from app.dependencies import get_current_user
 from app.models.sync import SyncRequest, SyncResponse, SyncResultItem
 
@@ -43,16 +43,17 @@ async def process_sync_batch(
       - If the key is new → inserted as `created`.
     """
     employee_id = current_user["id"]
+    token = current_user.get("_token")
     results: list[SyncResultItem] = []
 
     for event in body.events:
         try:
             if event.type == "check_in":
-                result = _sync_check_in(employee_id, event.client_event_id, event.payload)
+                result = _sync_check_in(employee_id, token, event.client_event_id, event.payload)
             elif event.type == "check_out":
-                result = _sync_check_out(employee_id, event.client_event_id, event.payload)
+                result = _sync_check_out(employee_id, token, event.client_event_id, event.payload)
             elif event.type == "leave_apply":
-                result = _sync_leave_apply(employee_id, event.client_event_id, event.payload)
+                result = _sync_leave_apply(employee_id, token, event.client_event_id, event.payload)
             else:
                 result = SyncResultItem(
                     client_event_id=event.client_event_id,
@@ -75,14 +76,15 @@ async def process_sync_batch(
 # ── Internal Sync Handlers ──────────────────────────────────────────
 
 
-def _sync_check_in(employee_id: str, idempotency_key: str, payload: dict) -> SyncResultItem:
+def _sync_check_in(employee_id: str, token: str | None, idempotency_key: str, payload: dict) -> SyncResultItem:
     """Upsert a check-in attendance record."""
     record_date = payload.get("date", datetime.now(timezone.utc).date().isoformat())
     check_in_time = payload.get("check_in_time", datetime.now(timezone.utc).isoformat())
+    client = get_supabase(token)
 
     # Check for existing idempotency key
     existing = (
-        supabase.table("attendance")
+        client.table("attendance")
         .select("id")
         .eq("sync_idempotency_key", idempotency_key)
         .maybe_single()
@@ -95,7 +97,7 @@ def _sync_check_in(employee_id: str, idempotency_key: str, payload: dict) -> Syn
             detail="Attendance record already synced.",
         )
 
-    supabase.table("attendance").upsert(
+    client.table("attendance").upsert(
         {
             "employee_id": employee_id,
             "date": record_date,
@@ -109,14 +111,15 @@ def _sync_check_in(employee_id: str, idempotency_key: str, payload: dict) -> Syn
     return SyncResultItem(client_event_id=idempotency_key, status="created")
 
 
-def _sync_check_out(employee_id: str, idempotency_key: str, payload: dict) -> SyncResultItem:
+def _sync_check_out(employee_id: str, token: str | None, idempotency_key: str, payload: dict) -> SyncResultItem:
     """Update an existing attendance record with check-out time."""
     record_date = payload.get("date", datetime.now(timezone.utc).date().isoformat())
     check_out_time = payload.get("check_out_time", datetime.now(timezone.utc).isoformat())
+    client = get_supabase(token)
 
     # Find the existing check-in to get check_in_time
     existing = (
-        supabase.table("attendance")
+        client.table("attendance")
         .select("*")
         .eq("employee_id", employee_id)
         .eq("date", record_date)
@@ -138,7 +141,7 @@ def _sync_check_out(employee_id: str, idempotency_key: str, payload: dict) -> Sy
     status_str, _ = calculate_daily_status(check_in_dt, check_out_dt, is_on_leave=False)
 
     response = (
-        supabase.table("attendance")
+        client.table("attendance")
         .update({
             "check_out_time": check_out_time,
             "status": status_str
@@ -157,11 +160,12 @@ def _sync_check_out(employee_id: str, idempotency_key: str, payload: dict) -> Sy
     return SyncResultItem(client_event_id=idempotency_key, status="created")
 
 
-def _sync_leave_apply(employee_id: str, idempotency_key: str, payload: dict) -> SyncResultItem:
+def _sync_leave_apply(employee_id: str, token: str | None, idempotency_key: str, payload: dict) -> SyncResultItem:
     """Insert a leave request if the idempotency key is new."""
+    client = get_supabase(token)
     # Check for duplicate
     existing = (
-        supabase.table("leave_requests")
+        client.table("leave_requests")
         .select("id")
         .eq("id", idempotency_key)
         .maybe_single()
@@ -174,7 +178,7 @@ def _sync_leave_apply(employee_id: str, idempotency_key: str, payload: dict) -> 
             detail="Leave request already synced.",
         )
 
-    supabase.table("leave_requests").insert(
+    client.table("leave_requests").insert(
         {
             "id": idempotency_key,
             "employee_id": employee_id,
@@ -187,3 +191,4 @@ def _sync_leave_apply(employee_id: str, idempotency_key: str, payload: dict) -> 
     ).execute()
 
     return SyncResultItem(client_event_id=idempotency_key, status="created")
+

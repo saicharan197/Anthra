@@ -4,7 +4,8 @@
 
 import { getCurrentUser, isAdmin } from './auth.js';
 import { showToast, showModal, hideModal, fmtDate, uuid, businessDaysBetween } from './ui.js';
-import { queueAction } from './offline-sync.js';
+import { enqueueAction } from './offline-db.js';
+import { updateNetworkBadge } from './offline-sync.js';
 
 // ── Mock Leave Data ─────────────────────────────────────────
 const _mockLeaves = [
@@ -195,7 +196,8 @@ async function _submitLeave() {
   _mockLeaves.push(leave);
 
   if (!navigator.onLine) {
-    await queueAction('leave_apply', { leave_type: type, start_date: start, end_date: end, remarks });
+    await enqueueAction('leave_apply', { leave_type: type, start_date: start, end_date: end, remarks });
+    await updateNetworkBadge();
   } else {
     showToast('Leave request submitted!', 'success');
   }

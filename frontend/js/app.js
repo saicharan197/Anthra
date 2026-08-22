@@ -4,7 +4,8 @@
 
 import { initAuth, getCurrentUser, signIn, signUp, signOut, switchRole, onRoleChange } from './auth.js';
 import { showToast, getGreeting, todayISO, fmtDate } from './ui.js';
-import { initOfflineDB, initNetworkListeners, updateQueueBadge, syncQueue } from './offline-sync.js';
+import { initDB } from './offline-db.js';
+import { initNetworkListeners, updateNetworkBadge, processSyncQueue, onSyncComplete } from './offline-sync.js';
 import { renderAttendanceView, handleCheckIn, handleCheckOut, getAttendanceStats } from './attendance.js';
 import { renderLeaveView, openApplyLeaveModal } from './leave.js';
 import { renderPayrollView, handleDownloadPDF } from './payroll.js';
@@ -16,11 +17,14 @@ let _currentView = 'dashboard';
 // ── Boot ─────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', async () => {
   // 1. Initialize IndexedDB
-  await initOfflineDB();
+  await initDB();
 
   // 2. Network listeners
   initNetworkListeners();
-  await updateQueueBadge();
+  await updateNetworkBadge();
+  onSyncComplete(() => {
+    _refreshCurrentView();
+  });
 
   // 3. Check auth state
   const user = initAuth();
@@ -157,7 +161,7 @@ function _bindActionEvents() {
   document.getElementById('btn-sync').addEventListener('click', async () => {
     const btn = document.getElementById('btn-sync');
     btn.classList.add('syncing');
-    await syncQueue();
+    await processSyncQueue();
     btn.classList.remove('syncing');
   });
 }

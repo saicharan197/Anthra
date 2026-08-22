@@ -4,7 +4,8 @@
 
 import { getCurrentUser, isAdmin, getAllEmployees } from './auth.js';
 import { showToast, fmtDate, fmtTime, todayISO, uuid } from './ui.js';
-import { queueAction } from './offline-sync.js';
+import { enqueueAction } from './offline-db.js';
+import { updateNetworkBadge } from './offline-sync.js';
 
 // ── Mock Attendance Data ────────────────────────────────────
 const _mockAttendance = [];
@@ -155,7 +156,8 @@ export async function handleCheckIn() {
   _mockAttendance.push(record);
 
   if (!navigator.onLine) {
-    await queueAction('check_in', { date: today, check_in_time: now });
+    await enqueueAction('check_in', { date: today, check_in_time: now });
+    await updateNetworkBadge();
   } else {
     showToast('Checked in successfully!', 'success');
   }
@@ -183,7 +185,8 @@ export async function handleCheckOut() {
   rec.hours = ((now - new Date(rec.check_in_time)) / 3600000).toFixed(1);
 
   if (!navigator.onLine) {
-    await queueAction('check_out', { date: today, check_out_time: rec.check_out_time });
+    await enqueueAction('check_out', { date: today, check_out_time: rec.check_out_time });
+    await updateNetworkBadge();
   } else {
     showToast('Checked out successfully!', 'success');
   }

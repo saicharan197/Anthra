@@ -75,68 +75,51 @@ async def get_payslip(
 
     # ── 3. Determine current month boundaries ──────────────────────
     today = datetime.now(timezone.utc).date()
-    first_day = today.replace(day=1)
-    total_working_days = _business_days_in_month(today.year, today.month)
+    import calendar
+    last_day = today.replace(day=calendar.monthrange(today.year, today.month)[1])
 
-    # ── 4. Count attendance ─────────────────────────────────────────
+    # ── 4. Fetch all attendance & approved leaves ───────────────────
     attendance_resp = (
         supabase.table("attendance")
-        .select("status")
+        .select("date, status")
         .eq("employee_id", employee_id)
-        .gte("date", first_day.isoformat())
-        .lte("date", today.isoformat())
+        .gte("date", today.replace(day=1).isoformat())
+        .lte("date", last_day.isoformat())
         .execute()
     )
-    attendance_rows = attendance_resp.data or []
-
-    days_present = 0.0
-    for row in attendance_rows:
-        if row.get("status") == "Present":
-            days_present += 1
-        elif row.get("status") == "Half-day":
-            days_present += 0.5
-
-    # ── 5. Count approved leave days ────────────────────────────────
+    
     leave_resp = (
         supabase.table("leave_requests")
-        .select("start_date, end_date")
+        .select("start_date, end_date, leave_type, status")
         .eq("employee_id", employee_id)
         .eq("status", "Approved")
-        .gte("start_date", first_day.isoformat())
-        .lte("end_date", today.isoformat())
         .execute()
     )
-    days_leave = 0
-    for lv in (leave_resp.data or []):
-        sd = date.fromisoformat(lv["start_date"])
-        ed = date.fromisoformat(lv["end_date"])
-        days_leave += (ed - sd).days + 1
 
-    # ── 6. Compute pro-rata salary ──────────────────────────────────
-    basic = float(structure["basic_salary"])
-    allowances = float(structure["allowances"])
-    deductions = float(structure["standard_deductions"])
-    gross = basic + allowances - deductions
-
-    days_absent = max(0, total_working_days - int(days_present) - days_leave)
-    per_day_rate = gross / total_working_days if total_working_days > 0 else 0
-    absence_deduction = round(per_day_rate * days_absent, 2)
-    net_salary = round(gross - absence_deduction, 2)
+    from app.services.payroll_engine import compute_monthly_payslip
+    payslip_data = compute_monthly_payslip(
+        structure=structure,
+        attendance_records=attendance_resp.data or [],
+        approved_unpaid_leaves=leave_resp.data or [],
+        month=today.month,
+        year=today.year,
+        working_days=30
+    )
 
     return PayslipOut(
         employee_id=employee_id,
         employee_name=employee_name,
         month=today.strftime("%B %Y"),
-        total_working_days=total_working_days,
-        days_present=int(days_present),
-        days_absent=days_absent,
-        days_leave_approved=days_leave,
-        basic_salary=basic,
-        allowances=allowances,
-        standard_deductions=deductions,
-        gross_salary=gross,
-        absence_deduction=absence_deduction,
-        net_salary=net_salary,
+        total_working_days=30,
+        days_present=payslip_data["breakdown"]["present_days"],
+        days_absent=payslip_data["breakdown"]["unapproved_absent_days"],
+        days_leave_approved=payslip_data["breakdown"]["unpaid_leave_days"],
+        basic_salary=payslip_data["basic_salary"],
+        allowances=payslip_data["allowances"],
+        standard_deductions=payslip_data["standard_deductions"],
+        gross_salary=payslip_data["gross_salary"],
+        absence_deduction=payslip_data["loss_of_pay_deduction"],
+        net_salary=payslip_data["net_salary"],
     )
 
 

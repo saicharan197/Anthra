@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,513 +10,555 @@
   <link rel="manifest" href="manifest.json">
   <link rel="stylesheet" href="css/style.css">
 </head>
+
 <body>
 
-<!-- ═══════════════════════════════════════════════════════════
+  <!-- ═══════════════════════════════════════════════════════════
      AUTH SCREEN
      ═══════════════════════════════════════════════════════════ -->
-<div id="auth-screen" class="auth-screen">
-  <div class="auth-card">
-    <div class="auth-brand">
-      <div class="brand-icon">D</div>
-      <h1>Dayflow</h1>
-      <p>Enterprise HRMS — every workday, perfectly aligned.</p>
-    </div>
-
-    <div class="auth-tabs">
-      <button class="auth-tab active" data-tab="signin" id="tab-signin">Sign In</button>
-      <button class="auth-tab" data-tab="signup" id="tab-signup">Sign Up</button>
-    </div>
-
-    <!-- Sign In -->
-    <form id="form-signin" class="auth-form">
-      <div class="form-group">
-        <label>Work Email</label>
-        <input type="email" class="form-input" id="signin-email" placeholder="you@company.com" required>
+  <div id="auth-screen" class="auth-screen">
+    <div class="auth-card">
+      <div class="auth-brand">
+        <div class="brand-icon">D</div>
+        <h1>Dayflow</h1>
+        <p>Enterprise HRMS — every workday, perfectly aligned.</p>
       </div>
-      <div class="form-group">
-        <label>Password</label>
-        <input type="password" class="form-input" id="signin-password" placeholder="••••••••" required>
+
+      <div class="auth-tabs">
+        <button class="auth-tab active" data-tab="signin" id="tab-signin">Sign In</button>
+        <button class="auth-tab" data-tab="signup" id="tab-signup">Sign Up</button>
       </div>
-      <button type="submit" class="btn btn-primary btn-block btn-lg">Sign In</button>
-    </form>
 
-    <!-- Sign Up -->
-    <form id="form-signup" class="auth-form hidden">
-      <div class="form-group">
-        <label>Employee ID</label>
-        <input type="text" class="form-input" id="signup-empid" placeholder="EMP-1042" required>
-      </div>
-      <div class="form-group">
-        <label>Full Name</label>
-        <input type="text" class="form-input" id="signup-name" placeholder="Tharun R" required>
-      </div>
-      <div class="form-group">
-        <label>Work Email</label>
-        <input type="email" class="form-input" id="signup-email" placeholder="you@company.com" required>
-      </div>
-      <div class="form-group">
-        <label>Password</label>
-        <input type="password" class="form-input" id="signup-password" placeholder="Min 8 characters" required minlength="8">
-      </div>
-      <div class="form-group">
-        <label>Role</label>
-        <select class="form-select" id="signup-role">
-          <option value="employee">Employee</option>
-          <option value="admin">Admin / HR Manager</option>
-        </select>
-      </div>
-      <button type="submit" class="btn btn-primary btn-block btn-lg">Create Account</button>
-    </form>
-  </div>
-</div>
-
-<!-- ═══════════════════════════════════════════════════════════
-     MAIN APP SHELL
-     ═══════════════════════════════════════════════════════════ -->
-<div id="app" class="app-layout hidden">
-
-  <!-- ── SIDEBAR ──────────────────────────────────────────── -->
-  <aside id="sidebar" class="sidebar">
-    <div class="sidebar-header">
-      <div class="sidebar-logo">D</div>
-      <h2>Dayflow</h2>
-    </div>
-
-    <nav class="sidebar-nav">
-      <span class="sidebar-section-label">Main</span>
-      <a href="#" class="nav-item active" data-view="dashboard" id="nav-dashboard">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
-        <span>Dashboard</span>
-      </a>
-      <a href="#" class="nav-item" data-view="attendance" id="nav-attendance">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-        <span>Attendance</span>
-      </a>
-
-      <span class="sidebar-section-label">Management</span>
-      <a href="#" class="nav-item" data-view="leave" id="nav-leave">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-        <span>Leave</span>
-      </a>
-      <a href="#" class="nav-item" data-view="payroll" id="nav-payroll">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-        <span>Payroll</span>
-      </a>
-
-      <span class="sidebar-section-label">Account</span>
-      <a href="#" class="nav-item" data-view="profile" id="nav-profile">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-        <span>Profile</span>
-      </a>
-    </nav>
-
-    <div class="sidebar-footer">
-      <button class="btn btn-outline btn-block btn-sm" id="btn-logout">
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-        Sign Out
-      </button>
-    </div>
-  </aside>
-
-  <!-- ── MAIN CONTENT ─────────────────────────────────────── -->
-  <div class="main-wrapper">
-
-    <!-- Topbar -->
-    <header class="topbar">
-      <div class="topbar-left">
-        <button class="btn-menu" id="btn-menu" aria-label="Toggle sidebar">☰</button>
-        <h3 id="view-title">Dashboard</h3>
-      </div>
-      <div class="topbar-right">
-        <!-- Network Status -->
-        <div class="network-badge" id="network-badge">
-          <span class="status-dot"></span>
-          <span class="status-text" id="network-text">Online</span>
-          <button class="btn-sync" id="btn-sync" title="Sync offline queue">
-            <span class="sync-icon">↻</span>
-            <span class="queue-count zero" id="queue-count">0</span>
-          </button>
+      <!-- Sign In -->
+      <form id="form-signin" class="auth-form">
+        <div class="form-group">
+          <label>Work Email</label>
+          <input type="email" class="form-input" id="signin-email" placeholder="you@company.com" required>
         </div>
-        <!-- Role Switcher -->
-        <div class="role-switcher">
-          <select id="role-select">
-            <option value="employee">👤 Employee View</option>
-            <option value="admin">🛡️ Admin View</option>
+        <div class="form-group">
+          <label>Password</label>
+          <input type="password" class="form-input" id="signin-password" placeholder="••••••••" required>
+        </div>
+        <button type="submit" class="btn btn-primary btn-block btn-lg">Sign In</button>
+      </form>
+
+      <!-- Sign Up -->
+      <form id="form-signup" class="auth-form hidden">
+        <div class="form-group">
+          <label>Employee ID</label>
+          <input type="text" class="form-input" id="signup-empid" readonly required>
+        </div>
+        <div class="form-group">
+          <label>Full Name</label>
+          <input type="text" class="form-input" id="signup-name" placeholder="Tharun R" required>
+        </div>
+        <div class="form-group">
+          <label>Work Email</label>
+          <input type="email" class="form-input" id="signup-email" placeholder="you@company.com" required>
+        </div>
+        <div class="form-group">
+          <label>Password</label>
+          <input type="password" class="form-input" id="signup-password" placeholder="Min 8 characters" required
+            minlength="8">
+        </div>
+        <div class="form-group">
+          <label>Role</label>
+          <select class="form-select" id="signup-role">
+            <option value="employee">Employee</option>
+            <option value="admin">Admin / HR Manager</option>
           </select>
         </div>
-        <!-- User Avatar -->
-        <div class="user-avatar" id="user-avatar">
-          <div class="avatar-circle" id="avatar-initials">TR</div>
-          <span class="user-name" id="topbar-user-name">Tharun</span>
-        </div>
+        <button type="submit" class="btn btn-primary btn-block btn-lg">Create Account</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════
+     MAIN APP SHELL
+     ═══════════════════════════════════════════════════════════ -->
+  <div id="app" class="app-layout hidden">
+
+    <!-- ── SIDEBAR ──────────────────────────────────────────── -->
+    <aside id="sidebar" class="sidebar">
+      <div class="sidebar-header">
+        <div class="sidebar-logo">D</div>
+        <h2>Dayflow</h2>
       </div>
-    </header>
 
-    <!-- Content Area -->
-    <main class="content-area">
+      <nav class="sidebar-nav">
+        <span class="sidebar-section-label">Main</span>
+        <a href="#" class="nav-item active" data-view="dashboard" id="nav-dashboard">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="7" height="7" rx="1" />
+            <rect x="14" y="3" width="7" height="7" rx="1" />
+            <rect x="3" y="14" width="7" height="7" rx="1" />
+            <rect x="14" y="14" width="7" height="7" rx="1" />
+          </svg>
+          <span>Dashboard</span>
+        </a>
+        <a href="#" class="nav-item" data-view="attendance" id="nav-attendance">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10" />
+            <polyline points="12 6 12 12 16 14" />
+          </svg>
+          <span>Attendance</span>
+        </a>
 
-      <!-- ───────── DASHBOARD VIEW ───────── -->
-      <section id="view-dashboard" class="view active">
-        <div class="welcome-banner">
-          <h2 id="welcome-msg">Good Morning, Tharun 👋</h2>
-          <p>Here's your workday overview for <span id="dashboard-date"></span></p>
+        <span class="sidebar-section-label">Management</span>
+        <a href="#" class="nav-item" data-view="leave" id="nav-leave">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="4" width="18" height="18" rx="2" />
+            <line x1="16" y1="2" x2="16" y2="6" />
+            <line x1="8" y1="2" x2="8" y2="6" />
+            <line x1="3" y1="10" x2="21" y2="10" />
+          </svg>
+          <span>Leave</span>
+        </a>
+        <a href="#" class="nav-item" data-view="payroll" id="nav-payroll">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <line x1="12" y1="1" x2="12" y2="23" />
+            <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+          </svg>
+          <span>Payroll</span>
+        </a>
+
+        <span class="sidebar-section-label">Account</span>
+        <a href="#" class="nav-item" data-view="profile" id="nav-profile">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+            <circle cx="12" cy="7" r="4" />
+          </svg>
+          <span>Profile</span>
+        </a>
+      </nav>
+
+      <div class="sidebar-footer">
+        <button class="btn btn-outline btn-block btn-sm" id="btn-logout">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+            <polyline points="16 17 21 12 16 7" />
+            <line x1="21" y1="12" x2="9" y2="12" />
+          </svg>
+          Sign Out
+        </button>
+      </div>
+    </aside>
+
+    <!-- ── MAIN CONTENT ─────────────────────────────────────── -->
+    <div class="main-wrapper">
+
+      <!-- Topbar -->
+      <header class="topbar">
+        <div class="topbar-left">
+          <button class="btn-menu" id="btn-menu" aria-label="Toggle sidebar">☰</button>
+          <h3 id="view-title">Dashboard</h3>
         </div>
-
-        <div class="stats-grid">
-          <div class="stat-card indigo">
-            <div class="stat-info">
-              <h4>Attendance Rate</h4>
-              <div class="stat-value" id="stat-attendance">92%</div>
-              <div class="stat-sub">This month</div>
-            </div>
-            <div class="stat-icon indigo">📊</div>
+        <div class="topbar-right">
+          <!-- Network Status -->
+          <div class="network-badge" id="network-badge">
+            <span class="status-dot"></span>
+            <span class="status-text" id="network-text">Online</span>
+            <button class="btn-sync" id="btn-sync" title="Sync offline queue">
+              <span class="sync-icon">↻</span>
+              <span class="queue-count zero" id="queue-count">0</span>
+            </button>
           </div>
-          <div class="stat-card emerald">
-            <div class="stat-info">
-              <h4>Leave Balance</h4>
-              <div class="stat-value" id="stat-leave-bal">18</div>
-              <div class="stat-sub">Days remaining</div>
-            </div>
-            <div class="stat-icon emerald">🏖️</div>
+          <!-- Role Switcher -->
+          <div class="role-switcher">
+            <select id="role-select">
+              <option value="employee">👤 Employee View</option>
+              <option value="admin">🛡️ Admin View</option>
+            </select>
           </div>
-          <div class="stat-card amber">
-            <div class="stat-info">
-              <h4>Working Days</h4>
-              <div class="stat-value" id="stat-working">17/22</div>
-              <div class="stat-sub">This month</div>
-            </div>
-            <div class="stat-icon amber">📅</div>
-          </div>
-          <div class="stat-card sky">
-            <div class="stat-info">
-              <h4>Next Payday</h4>
-              <div class="stat-value" id="stat-payday">Aug 31</div>
-              <div class="stat-sub">9 days away</div>
-            </div>
-            <div class="stat-icon sky">💰</div>
+          <!-- User Avatar -->
+          <div class="user-avatar" id="user-avatar">
+            <div class="avatar-circle" id="avatar-initials">TR</div>
+            <span class="user-name" id="topbar-user-name">Tharun</span>
           </div>
         </div>
+      </header>
 
-        <div class="grid-2">
-          <!-- Today's Status -->
-          <div class="card">
-            <div class="card-header">
-              <h3>Today's Status</h3>
-              <span class="badge badge-present" id="today-badge">Present</span>
+      <!-- Content Area -->
+      <main class="content-area">
+
+        <!-- ───────── DASHBOARD VIEW ───────── -->
+        <section id="view-dashboard" class="view active">
+          <div class="welcome-banner">
+            <h2 id="welcome-msg">Good Morning, Tharun 👋</h2>
+            <p>Here's your workday overview for <span id="dashboard-date"></span></p>
+          </div>
+
+          <div class="stats-grid">
+            <div class="stat-card indigo">
+              <div class="stat-info">
+                <h4>Attendance Rate</h4>
+                <div class="stat-value" id="stat-attendance">92%</div>
+                <div class="stat-sub">This month</div>
+              </div>
+              <div class="stat-icon indigo">📊</div>
             </div>
-            <div class="punch-status">
-              <div class="punch-dot"></div>
-              <div class="punch-info">
-                <div class="punch-label">Check-In</div>
-                <div class="punch-value" id="today-checkin">09:15 AM</div>
+            <div class="stat-card emerald">
+              <div class="stat-info">
+                <h4>Leave Balance</h4>
+                <div class="stat-value" id="stat-leave-bal">18</div>
+                <div class="stat-sub">Days remaining</div>
+              </div>
+              <div class="stat-icon emerald">🏖️</div>
+            </div>
+            <div class="stat-card amber">
+              <div class="stat-info">
+                <h4>Working Days</h4>
+                <div class="stat-value" id="stat-working">17/22</div>
+                <div class="stat-sub">This month</div>
+              </div>
+              <div class="stat-icon amber">📅</div>
+            </div>
+            <div class="stat-card sky">
+              <div class="stat-info">
+                <h4>Next Payday</h4>
+                <div class="stat-value" id="stat-payday">Aug 31</div>
+                <div class="stat-sub">9 days away</div>
+              </div>
+              <div class="stat-icon sky">💰</div>
+            </div>
+          </div>
+
+          <div class="grid-2">
+            <!-- Today's Status -->
+            <div class="card">
+              <div class="card-header">
+                <h3>Today's Status</h3>
+                <span class="badge badge-present" id="today-badge">Present</span>
+              </div>
+              <div class="punch-status">
+                <div class="punch-dot"></div>
+                <div class="punch-info">
+                  <div class="punch-label">Check-In</div>
+                  <div class="punch-value" id="today-checkin">09:15 AM</div>
+                </div>
+              </div>
+              <div class="punch-status" style="margin-top:8px;background:var(--slate-50);border-color:var(--slate-200)">
+                <div class="punch-dot" style="background:var(--slate-400);box-shadow:none"></div>
+                <div class="punch-info">
+                  <div class="punch-label">Check-Out</div>
+                  <div class="punch-value" id="today-checkout">— Pending</div>
+                </div>
               </div>
             </div>
-            <div class="punch-status" style="margin-top:8px;background:var(--slate-50);border-color:var(--slate-200)">
-              <div class="punch-dot" style="background:var(--slate-400);box-shadow:none"></div>
-              <div class="punch-info">
-                <div class="punch-label">Check-Out</div>
-                <div class="punch-value" id="today-checkout">— Pending</div>
+
+            <!-- Recent Activity -->
+            <div class="card">
+              <div class="card-header">
+                <h3>Recent Activity</h3>
               </div>
-            </div>
-          </div>
-
-          <!-- Recent Activity -->
-          <div class="card">
-            <div class="card-header">
-              <h3>Recent Activity</h3>
-            </div>
-            <div id="recent-activity">
-              <!-- Populated by JS -->
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- ───────── ATTENDANCE VIEW ───────── -->
-      <section id="view-attendance" class="view">
-        <div class="view-header">
-          <h2>Attendance</h2>
-        </div>
-
-        <div class="grid-2 mb-6">
-          <!-- QR Scanner Card -->
-          <div class="card">
-            <div class="card-header">
-              <h3>QR Check-In / Check-Out</h3>
-            </div>
-            <div class="qr-scanner-area" id="qr-reader">
-              <div class="qr-viewfinder">
-                <span class="corner tl"></span>
-                <span class="corner tr"></span>
-                <span class="corner bl"></span>
-                <span class="corner br"></span>
-                <div class="qr-scan-line"></div>
-              </div>
-              <div class="qr-label">Position QR code within the frame</div>
-            </div>
-            <div style="display:flex;gap:12px;margin-top:16px">
-              <button class="btn btn-accent btn-block" id="btn-manual-checkin">✓ Manual Check-In</button>
-              <button class="btn btn-outline btn-block" id="btn-manual-checkout">↩ Manual Check-Out</button>
-            </div>
-            <div class="punch-status" id="attendance-punch-status" style="margin-top:16px">
-              <div class="punch-dot"></div>
-              <div class="punch-info">
-                <div class="punch-label">Today's Status</div>
-                <div class="punch-value" id="att-today-status">Not checked in yet</div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Today's Summary -->
-          <div class="card">
-            <div class="card-header">
-              <h3>Today's Details</h3>
-              <span class="badge badge-present" id="att-today-badge">—</span>
-            </div>
-            <div style="display:flex;flex-direction:column;gap:12px;" id="att-today-details">
-              <div class="payslip-row"><span class="label">Date</span><span class="amount" id="att-detail-date">—</span></div>
-              <div class="payslip-row"><span class="label">Check-In</span><span class="amount" id="att-detail-in">—</span></div>
-              <div class="payslip-row"><span class="label">Check-Out</span><span class="amount" id="att-detail-out">—</span></div>
-              <div class="payslip-row"><span class="label">Hours Logged</span><span class="amount" id="att-detail-hours">—</span></div>
-              <div class="payslip-row"><span class="label">Status</span><span class="amount" id="att-detail-status">—</span></div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Attendance History Table -->
-        <div class="card">
-          <div class="card-header">
-            <h3>Attendance History</h3>
-            <div class="admin-only flex items-center gap-12">
-              <select class="form-select" id="att-filter-employee" style="min-width:180px">
-                <option value="">All Employees</option>
-              </select>
-            </div>
-          </div>
-          <div class="table-wrapper">
-            <table class="data-table">
-              <thead>
-                <tr>
-                  <th>Date</th>
-                  <th class="admin-only">Employee</th>
-                  <th>In-Time</th>
-                  <th>Out-Time</th>
-                  <th>Hours</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody id="attendance-tbody">
+              <div id="recent-activity">
                 <!-- Populated by JS -->
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </section>
-
-      <!-- ───────── LEAVE VIEW ───────── -->
-      <section id="view-leave" class="view">
-        <div class="view-header">
-          <h2>Leave Management</h2>
-          <button class="btn btn-primary" id="btn-apply-leave">+ Apply for Leave</button>
-        </div>
-
-        <!-- Leave Balances -->
-        <div class="leave-balance-grid employee-only">
-          <div class="card leave-balance-card">
-            <div class="lb-value text-primary" id="lb-paid">12</div>
-            <div class="lb-label">Paid Leave</div>
-            <div class="lb-used">4 used</div>
-          </div>
-          <div class="card leave-balance-card">
-            <div class="lb-value text-accent" id="lb-sick">6</div>
-            <div class="lb-label">Sick Leave</div>
-            <div class="lb-used">1 used</div>
-          </div>
-          <div class="card leave-balance-card">
-            <div class="lb-value" style="color:var(--slate-600)" id="lb-unpaid">∞</div>
-            <div class="lb-label">Unpaid Leave</div>
-            <div class="lb-used">0 used</div>
-          </div>
-        </div>
-
-        <!-- Employee Leave History -->
-        <div class="card mb-6">
-          <div class="card-header">
-            <h3 class="employee-only">My Leave Requests</h3>
-            <h3 class="admin-only">All Leave Requests — Admin Queue</h3>
-          </div>
-          <div class="table-wrapper">
-            <table class="data-table">
-              <thead>
-                <tr>
-                  <th class="admin-only">Employee</th>
-                  <th>Type</th>
-                  <th>Start</th>
-                  <th>End</th>
-                  <th>Days</th>
-                  <th>Remarks</th>
-                  <th>Status</th>
-                  <th class="admin-only">Actions</th>
-                </tr>
-              </thead>
-              <tbody id="leave-tbody">
-                <!-- Populated by JS -->
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </section>
-
-      <!-- ───────── PAYROLL VIEW ───────── -->
-      <section id="view-payroll" class="view">
-        <div class="view-header">
-          <h2>Payroll</h2>
-        </div>
-
-        <!-- Employee Payslip -->
-        <div class="employee-only">
-          <div class="payslip-card" style="max-width:600px">
-            <div class="payslip-header">
-              <h3>Salary Slip — <span id="payslip-month">August 2026</span></h3>
-              <p id="payslip-emp-name">Tharun R · EMP-1042</p>
-            </div>
-            <div class="payslip-body">
-              <div class="payslip-section">
-                <h4>Earnings</h4>
-                <div class="payslip-row"><span class="label">Basic Salary</span><span class="amount" id="ps-basic">₹45,000</span></div>
-                <div class="payslip-row"><span class="label">Allowances</span><span class="amount" id="ps-allow">₹10,000</span></div>
-                <div class="payslip-row"><span class="label">Gross Pay</span><span class="amount fw-600" id="ps-gross">₹55,000</span></div>
-              </div>
-              <div class="payslip-section">
-                <h4>Deductions</h4>
-                <div class="payslip-row deduction"><span class="label">Standard Deductions</span><span class="amount" id="ps-deduct">−₹5,000</span></div>
-                <div class="payslip-row deduction"><span class="label">Absence Deduction (Pro-Rata)</span><span class="amount" id="ps-absence">−₹0</span></div>
-              </div>
-              <div class="payslip-total">
-                <span class="net-label">Net Pay</span>
-                <span class="net-amount" id="ps-net">₹50,000</span>
               </div>
             </div>
-            <div style="padding:0 28px 24px">
-              <button class="btn btn-outline btn-block" id="btn-download-pdf">📄 Download PDF</button>
+          </div>
+        </section>
+
+        <!-- ───────── ATTENDANCE VIEW ───────── -->
+        <section id="view-attendance" class="view">
+          <div class="view-header">
+            <h2>Attendance</h2>
+          </div>
+
+          <div class="grid-2 mb-6">
+            <!-- QR Scanner Card -->
+            <div class="card">
+              <div class="card-header">
+                <h3>QR Check-In / Check-Out</h3>
+              </div>
+              <div class="qr-scanner-area" id="qr-reader">
+                <div class="qr-viewfinder">
+                  <span class="corner tl"></span>
+                  <span class="corner tr"></span>
+                  <span class="corner bl"></span>
+                  <span class="corner br"></span>
+                  <div class="qr-scan-line"></div>
+                </div>
+                <div class="qr-label">Position QR code within the frame</div>
+              </div>
+              <div style="display:flex;gap:12px;margin-top:16px">
+                <button class="btn btn-accent btn-block" id="btn-manual-checkin">✓ Manual Check-In</button>
+                <button class="btn btn-outline btn-block" id="btn-manual-checkout">↩ Manual Check-Out</button>
+              </div>
+              <div class="punch-status" id="attendance-punch-status" style="margin-top:16px">
+                <div class="punch-dot"></div>
+                <div class="punch-info">
+                  <div class="punch-label">Today's Status</div>
+                  <div class="punch-value" id="att-today-status">Not checked in yet</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Today's Summary -->
+            <div class="card">
+              <div class="card-header">
+                <h3>Today's Details</h3>
+                <span class="badge badge-present" id="att-today-badge">—</span>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:12px;" id="att-today-details">
+                <div class="payslip-row"><span class="label">Date</span><span class="amount"
+                    id="att-detail-date">—</span></div>
+                <div class="payslip-row"><span class="label">Check-In</span><span class="amount"
+                    id="att-detail-in">—</span></div>
+                <div class="payslip-row"><span class="label">Check-Out</span><span class="amount"
+                    id="att-detail-out">—</span></div>
+                <div class="payslip-row"><span class="label">Hours Logged</span><span class="amount"
+                    id="att-detail-hours">—</span></div>
+                <div class="payslip-row"><span class="label">Status</span><span class="amount"
+                    id="att-detail-status">—</span></div>
+              </div>
             </div>
           </div>
-        </div>
 
-        <!-- Admin: Compensation Editor -->
-        <div class="admin-only">
-          <div class="card mb-6">
+          <!-- Attendance History Table -->
+          <div class="card">
             <div class="card-header">
-              <h3>Employee Compensation Structure</h3>
+              <h3>Attendance History</h3>
+              <div class="admin-only flex items-center gap-12">
+                <select class="form-select" id="att-filter-employee" style="min-width:180px">
+                  <option value="">All Employees</option>
+                </select>
+              </div>
             </div>
             <div class="table-wrapper">
               <table class="data-table">
                 <thead>
                   <tr>
-                    <th>Employee</th>
-                    <th>Emp ID</th>
-                    <th>Basic Salary</th>
-                    <th>Allowances</th>
-                    <th>Deductions</th>
-                    <th>Net</th>
-                    <th>Actions</th>
+                    <th>Date</th>
+                    <th class="admin-only">Employee</th>
+                    <th>In-Time</th>
+                    <th>Out-Time</th>
+                    <th>Hours</th>
+                    <th>Status</th>
                   </tr>
                 </thead>
-                <tbody id="payroll-admin-tbody">
+                <tbody id="attendance-tbody">
                   <!-- Populated by JS -->
                 </tbody>
               </table>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      <!-- ───────── PROFILE VIEW ───────── -->
-      <section id="view-profile" class="view">
-        <div class="view-header">
-          <h2>Profile</h2>
-        </div>
+        <!-- ───────── LEAVE VIEW ───────── -->
+        <section id="view-leave" class="view">
+          <div class="view-header">
+            <h2>Leave Management</h2>
+            <button class="btn btn-primary" id="btn-apply-leave">+ Apply for Leave</button>
+          </div>
 
-        <div class="card mb-6">
-          <div class="profile-header-card">
-            <div class="profile-avatar-lg" id="profile-avatar">TR</div>
-            <div class="profile-meta">
-              <h2 id="profile-name">Tharun R</h2>
-              <p id="profile-subtitle">Software Engineer · EMP-1042</p>
+          <!-- Leave Balances -->
+          <div class="leave-balance-grid employee-only">
+            <div class="card leave-balance-card">
+              <div class="lb-value text-primary" id="lb-paid">12</div>
+              <div class="lb-label">Paid Leave</div>
+              <div class="lb-used">4 used</div>
+            </div>
+            <div class="card leave-balance-card">
+              <div class="lb-value text-accent" id="lb-sick">6</div>
+              <div class="lb-label">Sick Leave</div>
+              <div class="lb-used">1 used</div>
+            </div>
+            <div class="card leave-balance-card">
+              <div class="lb-value" style="color:var(--slate-600)" id="lb-unpaid">∞</div>
+              <div class="lb-label">Unpaid Leave</div>
+              <div class="lb-used">0 used</div>
             </div>
           </div>
-          <hr style="border:none;border-top:1px solid var(--slate-100)">
-          <div class="profile-info-grid" id="profile-info-grid">
-            <!-- Populated by JS -->
-          </div>
-        </div>
 
-        <!-- Editable Form -->
-        <div class="card">
-          <div class="card-header">
-            <h3 class="employee-only">Edit Contact Info</h3>
-            <h3 class="admin-only">Edit Profile (Admin)</h3>
+          <!-- Employee Leave History -->
+          <div class="card mb-6">
+            <div class="card-header">
+              <h3 class="employee-only">My Leave Requests</h3>
+              <h3 class="admin-only">All Leave Requests — Admin Queue</h3>
+            </div>
+            <div class="table-wrapper">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th class="admin-only">Employee</th>
+                    <th>Type</th>
+                    <th>Start</th>
+                    <th>End</th>
+                    <th>Days</th>
+                    <th>Remarks</th>
+                    <th>Status</th>
+                    <th class="admin-only">Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="leave-tbody">
+                  <!-- Populated by JS -->
+                </tbody>
+              </table>
+            </div>
           </div>
-          <form id="form-profile" style="padding:0 0 8px">
-            <div class="form-row">
-              <div class="form-group">
-                <label>Phone Number</label>
-                <input type="tel" class="form-input" id="pf-phone" placeholder="+91 9876543210">
+        </section>
+
+        <!-- ───────── PAYROLL VIEW ───────── -->
+        <section id="view-payroll" class="view">
+          <div class="view-header">
+            <h2>Payroll</h2>
+          </div>
+
+          <!-- Employee Payslip -->
+          <div class="employee-only">
+            <div class="payslip-card" style="max-width:600px">
+              <div class="payslip-header">
+                <h3>Salary Slip — <span id="payslip-month">August 2026</span></h3>
+                <p id="payslip-emp-name">Tharun R · EMP-1042</p>
               </div>
-              <div class="form-group">
-                <label>Home Address</label>
-                <input type="text" class="form-input" id="pf-address" placeholder="123 Main St, City">
+              <div class="payslip-body">
+                <div class="payslip-section">
+                  <h4>Earnings</h4>
+                  <div class="payslip-row"><span class="label">Basic Salary</span><span class="amount"
+                      id="ps-basic">₹45,000</span></div>
+                  <div class="payslip-row"><span class="label">Allowances</span><span class="amount"
+                      id="ps-allow">₹10,000</span></div>
+                  <div class="payslip-row"><span class="label">Gross Pay</span><span class="amount fw-600"
+                      id="ps-gross">₹55,000</span></div>
+                </div>
+                <div class="payslip-section">
+                  <h4>Deductions</h4>
+                  <div class="payslip-row deduction"><span class="label">Standard Deductions</span><span class="amount"
+                      id="ps-deduct">−₹5,000</span></div>
+                  <div class="payslip-row deduction"><span class="label">Absence Deduction (Pro-Rata)</span><span
+                      class="amount" id="ps-absence">−₹0</span></div>
+                </div>
+                <div class="payslip-total">
+                  <span class="net-label">Net Pay</span>
+                  <span class="net-amount" id="ps-net">₹50,000</span>
+                </div>
+              </div>
+              <div style="padding:0 28px 24px">
+                <button class="btn btn-outline btn-block" id="btn-download-pdf">📄 Download PDF</button>
               </div>
             </div>
-            <div class="form-group">
-              <label>Avatar URL</label>
-              <input type="url" class="form-input" id="pf-avatar" placeholder="https://…/photo.jpg">
+          </div>
+
+          <!-- Admin: Compensation Editor -->
+          <div class="admin-only">
+            <div class="card mb-6">
+              <div class="card-header">
+                <h3>Employee Compensation Structure</h3>
+              </div>
+              <div class="table-wrapper">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>Employee</th>
+                      <th>Emp ID</th>
+                      <th>Basic Salary</th>
+                      <th>Allowances</th>
+                      <th>Deductions</th>
+                      <th>Net</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody id="payroll-admin-tbody">
+                    <!-- Populated by JS -->
+                  </tbody>
+                </table>
+              </div>
             </div>
-            <!-- Admin-only fields -->
-            <div class="admin-only">
-              <hr style="border:none;border-top:1px solid var(--slate-100);margin:12px 0 16px">
+          </div>
+        </section>
+
+        <!-- ───────── PROFILE VIEW ───────── -->
+        <section id="view-profile" class="view">
+          <div class="view-header">
+            <h2>Profile</h2>
+          </div>
+
+          <div class="card mb-6">
+            <div class="profile-header-card">
+              <div class="profile-avatar-lg" id="profile-avatar">TR</div>
+              <div class="profile-meta">
+                <h2 id="profile-name">Tharun R</h2>
+                <p id="profile-subtitle">Software Engineer · EMP-1042</p>
+              </div>
+            </div>
+            <hr style="border:none;border-top:1px solid var(--slate-100)">
+            <div class="profile-info-grid" id="profile-info-grid">
+              <!-- Populated by JS -->
+            </div>
+          </div>
+
+          <!-- Editable Form -->
+          <div class="card">
+            <div class="card-header">
+              <h3 class="employee-only">Edit Contact Info</h3>
+              <h3 class="admin-only">Edit Profile (Admin)</h3>
+            </div>
+            <form id="form-profile" style="padding:0 0 8px">
               <div class="form-row">
                 <div class="form-group">
-                  <label>Job Title</label>
-                  <input type="text" class="form-input" id="pf-jobtitle" placeholder="Senior Engineer">
+                  <label>Phone Number</label>
+                  <input type="tel" class="form-input" id="pf-phone" placeholder="+91 9876543210">
                 </div>
                 <div class="form-group">
-                  <label>Role</label>
-                  <select class="form-select" id="pf-role">
-                    <option value="employee">Employee</option>
-                    <option value="admin">Admin</option>
-                  </select>
+                  <label>Home Address</label>
+                  <input type="text" class="form-input" id="pf-address" placeholder="123 Main St, City">
                 </div>
               </div>
-            </div>
-            <button type="submit" class="btn btn-primary">Save Changes</button>
-          </form>
-        </div>
-      </section>
+              <div class="form-group">
+                <label>Avatar URL</label>
+                <input type="url" class="form-input" id="pf-avatar" placeholder="https://…/photo.jpg">
+              </div>
+              <!-- Admin-only fields -->
+              <div class="admin-only">
+                <hr style="border:none;border-top:1px solid var(--slate-100);margin:12px 0 16px">
+                <div class="form-row">
+                  <div class="form-group">
+                    <label>Job Title</label>
+                    <input type="text" class="form-input" id="pf-jobtitle" placeholder="Senior Engineer">
+                  </div>
+                  <div class="form-group">
+                    <label>Role</label>
+                    <select class="form-select" id="pf-role">
+                      <option value="employee">Employee</option>
+                      <option value="admin">Admin</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+              <button type="submit" class="btn btn-primary">Save Changes</button>
+            </form>
+          </div>
+        </section>
 
-    </main>
+      </main>
+    </div>
   </div>
-</div>
 
-<!-- ═══════════════════════════════════════════════════════════
+  <!-- ═══════════════════════════════════════════════════════════
      MODAL OVERLAY
      ═══════════════════════════════════════════════════════════ -->
-<div id="modal-overlay" class="modal-overlay hidden">
-  <div class="modal-card" id="modal-card">
-    <!-- Populated dynamically by JS -->
+  <div id="modal-overlay" class="modal-overlay hidden">
+    <div class="modal-card" id="modal-card">
+      <!-- Populated dynamically by JS -->
+    </div>
   </div>
-</div>
 
-<!-- ═══════════════════════════════════════════════════════════
+  <!-- ═══════════════════════════════════════════════════════════
      TOAST CONTAINER
      ═══════════════════════════════════════════════════════════ -->
-<div id="toast-container" class="toast-container"></div>
+  <div id="toast-container" class="toast-container"></div>
 
-<!-- ═══════════════════════════════════════════════════════════
+  <!-- ═══════════════════════════════════════════════════════════
      SCRIPTS (ES Modules)
      ═══════════════════════════════════════════════════════════ -->
-<script type="module" src="js/app.js"></script>
+  <script type="module" src="js/app.js"></script>
 
 </body>
+
 </html>

@@ -50,6 +50,9 @@ function _bindAuthEvents() {
       const isSignIn = tab.dataset.tab === 'signin';
       document.getElementById('form-signin').classList.toggle('hidden', !isSignIn);
       document.getElementById('form-signup').classList.toggle('hidden', isSignIn);
+      if (!isSignIn) {
+        document.getElementById('signup-empid').value = 'EMP-' + Math.floor(1000 + Math.random() * 9000);
+      }
     });
   });
 

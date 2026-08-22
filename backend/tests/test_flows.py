@@ -27,42 +27,109 @@ def mock_supabase_client(monkeypatch):
         def __init__(self, table_name):
             self.table_name = table_name
             self.filters = {}
+            self.result_data = None
+            self.single = False
 
-        def select(self, *args, **kwargs): return self
+        def select(self, *args, **kwargs):
+            return self
+
         def eq(self, col, val):
             self.filters[col] = val
             return self
-        def gte(self, col, val): return self
-        def lte(self, col, val): return self
-        def order(self, *args, **kwargs): return self
-        def limit(self, *args, **kwargs): return self
-        
+
+        def gte(self, col, val):
+            return self
+
+        def lte(self, col, val):
+            return self
+
+        def order(self, *args, **kwargs):
+            return self
+
+        def limit(self, *args, **kwargs):
+            return self
+
         def maybe_single(self):
-            # Return appropriate mock profiles/structures
+            self.single = True
+            return self
+
+        def insert(self, payload):
+            self.result_data = [payload] if isinstance(payload, dict) else payload
+            return self
+
+        def upsert(self, payload, on_conflict=None):
+            self.result_data = [payload] if isinstance(payload, dict) else payload
+            return self
+
+        def update(self, payload):
+            self.result_data = [payload] if isinstance(payload, dict) else payload
+            return self
+
+        def execute(self):
+            if self.result_data is not None:
+                data = self.result_data
+                # Merge dynamic updates with base mock profile to ensure Pydantic validates successfully
+                if self.table_name == "profiles":
+                    base = {
+                        "id": "emp-123", "role": "employee", "full_name": "Test Emp",
+                        "email": "emp@company.com", "employee_id": "EMP-1042",
+                        "phone": None, "address": None, "profile_pic_url": None, "job_title": None
+                    }
+                    if isinstance(data, list):
+                        data = [{**base, **item} for item in data]
+                    elif isinstance(data, dict):
+                        data = {**base, **data}
+
+                # Ensure 'id' exists for response mapping
+                if isinstance(data, list):
+                    for item in data:
+                        if isinstance(item, dict) and "id" not in item:
+                            item["id"] = "mock-id-uuid"
+                elif isinstance(data, dict):
+                    if "id" not in data:
+                        data["id"] = "mock-id-uuid"
+
+                if self.single and isinstance(data, list):
+                    data = data[0] if data else None
+                return MockResponse(data)
+
+            # Default GET queries
             if self.table_name == "profiles":
                 user_id = self.filters.get("id")
                 if user_id == "emp-123":
-                    return MockResponse({
+                    data = {
                         "id": "emp-123", "role": "employee", "full_name": "Test Emp",
-                        "email": "emp@company.com", "employee_id": "EMP-1042"
-                    })
+                        "email": "emp@company.com", "employee_id": "EMP-1042",
+                        "phone": None, "address": None, "profile_pic_url": None, "job_title": None
+                    }
                 elif user_id == "admin-123":
-                    return MockResponse({
+                    data = {
                         "id": "admin-123", "role": "admin", "full_name": "Test Admin",
-                        "email": "admin@company.com", "employee_id": "EMP-0001"
-                    })
+                        "email": "admin@company.com", "employee_id": "EMP-0001",
+                        "phone": None, "address": None, "profile_pic_url": None, "job_title": None
+                    }
+                else:
+                    data = {
+                        "id": "emp-123", "role": "employee", "full_name": "Test Emp",
+                        "email": "emp@company.com", "employee_id": "EMP-1042",
+                        "phone": None, "address": None, "profile_pic_url": None, "job_title": None
+                    }
+                if not self.single:
+                    data = [data]
+                return MockResponse(data)
+
             elif self.table_name == "payroll_structures":
-                return MockResponse({
+                data = {
                     "id": "ps-1", "employee_id": "emp-123", "basic_salary": 45000.0,
                     "allowances": 10000.0, "standard_deductions": 5000.0
-                })
-            return MockResponse(None)
+                }
+                if not self.single:
+                    data = [data]
+                return MockResponse(data)
 
-        def execute(self):
-            # Return appropriate lists for sync/leave/attendance queries
-            if self.table_name == "leave_requests":
+            elif self.table_name == "leave_requests":
                 # Overlap collision testing mock list
-                return MockResponse([
+                data = [
                     {
                         "id": "existing-leave-1",
                         "employee_id": "emp-123",
@@ -71,53 +138,56 @@ def mock_supabase_client(monkeypatch):
                         "leave_type": "Paid",
                         "status": "Approved"
                     }
-                ])
+                ]
+                return MockResponse(data)
+
             elif self.table_name == "attendance":
-                return MockResponse([
+                data = [
                     {"date": "2026-08-01", "status": "Present"},
                     {"date": "2026-08-02", "status": "Half-day"},
                     {"date": "2026-08-03", "status": "Half-day"},
                     {"date": "2026-08-04", "status": "Absent"}
-                ])
+                ]
+                return MockResponse(data)
+
             return MockResponse([])
-
-        def insert(self, payload):
-            return MockResponse([payload] if isinstance(payload, dict) else payload)
-            
-        def upsert(self, payload, on_conflict=None):
-            return MockResponse([payload] if isinstance(payload, dict) else payload)
-
-        def update(self, payload):
-            return MockResponse([payload] if isinstance(payload, dict) else payload)
 
     monkeypatch.setattr(supabase, "table", lambda name: MockQuery(name))
 
 
 # Mock token generation / verification
 @pytest.fixture(autouse=True)
-def mock_jwt_auth(monkeypatch):
+def mock_jwt_auth():
     """
     Bypasses token verification by mocking get_current_user to return mock users.
     We handle authorization scoping through custom headers in tests.
     """
     from app.dependencies import get_current_user
+    from fastapi import Depends
+    from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
     
-    async def mock_get_user(credentials = None, settings = None):
+    _bearer_scheme = HTTPBearer()
+    
+    async def mock_get_user(credentials: HTTPAuthorizationCredentials = Depends(_bearer_scheme), settings = None):
         # Read header or check some state to decide who is calling
         # For simplicity, we decode custom mock tokens: "admin-token" or "emp-token"
         token = credentials.credentials if credentials else ""
         if token == "admin-token":
             return {
                 "id": "admin-123", "role": "admin", "full_name": "Test Admin",
-                "email": "admin@company.com", "employee_id": "EMP-0001"
+                "email": "admin@company.com", "employee_id": "EMP-0001",
+                "phone": None, "address": None, "profile_pic_url": None, "job_title": None
             }
         else:
             return {
                 "id": "emp-123", "role": "employee", "full_name": "Test Emp",
-                "email": "emp@company.com", "employee_id": "EMP-1042"
+                "email": "emp@company.com", "employee_id": "EMP-1042",
+                "phone": None, "address": None, "profile_pic_url": None, "job_title": None
             }
 
-    monkeypatch.setattr("app.dependencies.get_current_user", mock_get_user)
+    app.dependency_overrides[get_current_user] = mock_get_user
+    yield
+    app.dependency_overrides.clear()
 
 
 # ─── 1. RBAC SECURITY BOUNDARIES ─────────────────────────────────────
@@ -194,17 +264,30 @@ def test_sync_idempotency_replay(monkeypatch):
     called = []
     
     class MockQueryWithState:
+        def __init__(self):
+            self.single = False
+            
         def select(self, *args, **kwargs): return self
         def eq(self, col, val): return self
+        
         def maybe_single(self):
+            self.single = True
+            return self
+            
+        def execute(self):
+            class MockResponse:
+                def __init__(self, data):
+                    self.data = data
             if "called" in called:
                 # Second call, return a mock record to simulate duplicate
-                return type('MockResponse', (object,), {"data": {"id": "existing-att-id"}})()
+                data = {"id": "existing-att-id"} if self.single else [{"id": "existing-att-id"}]
+                return MockResponse(data)
             called.append("called")
-            return type('MockResponse', (object,), {"data": None})()
+            data = None if self.single else []
+            return MockResponse(data)
             
-        def upsert(self, *args, **kwargs):
-            return type('MockResponse', (object,), {"data": [{}]})()
+        def upsert(self, payload, on_conflict=None):
+            return self
 
     monkeypatch.setattr(supabase, "table", lambda name: MockQueryWithState() if name == "attendance" else supabase.table(name))
 
@@ -243,7 +326,7 @@ def test_leave_apply_inverted_dates():
         headers=headers
     )
     assert resp.status_code == 422
-    assert "on or after start_date" in resp.json()["detail"][0]["msg"].lower()
+    assert "on or after start_date" in resp.json()["detail"].lower()
 
 
 def test_leave_apply_overlapping_dates():
@@ -266,6 +349,30 @@ def test_payslip_real_time_calculation(monkeypatch):
     headers = {"Authorization": "Bearer emp-token"}
     
     # Mocking leave_requests query to return approved unpaid leaves (2 business days: Aug 17, 18)
+    original_table = supabase.table
+    def mock_table(name):
+        if name == "leave_requests":
+            class MockQuery:
+                def select(self, *args, **kwargs): return self
+                def eq(self, col, val): return self
+                def execute(self):
+                    class MockResponse:
+                        data = [
+                            {
+                                "id": "leave-1",
+                                "employee_id": "emp-123",
+                                "start_date": "2026-08-17",
+                                "end_date": "2026-08-18",
+                                "leave_type": "Unpaid",
+                                "status": "Approved"
+                            }
+                        ]
+                    return MockResponse()
+            return MockQuery()
+        return original_table(name)
+        
+    monkeypatch.setattr(supabase, "table", mock_table)
+
     # Mocking attendance query to return:
     #   - 1 Present (Aug 1)
     #   - 2 Half-days (Aug 2, Aug 3) = 1 effective absent day
@@ -280,7 +387,7 @@ def test_payslip_real_time_calculation(monkeypatch):
     
     assert data["gross_salary"] == 55000.00
     assert data["standard_deductions"] == 5000.00
-    assert data["loss_of_pay_deduction"] == 7333.33
+    assert data["absence_deduction"] == 7333.33
     assert data["net_salary"] == 42666.67
     assert data["days_present"] == 1
     assert data["days_absent"] == 1

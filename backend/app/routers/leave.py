@@ -38,6 +38,25 @@ async def apply_leave(
             detail="end_date must be on or after start_date.",
         )
 
+    # Fetch existing leaves for this user to check overlap
+    existing = (
+        supabase.table("leave_requests")
+        .select("*")
+        .eq("employee_id", current_user["id"])
+        .execute()
+    )
+    from app.services.leave_engine import validate_leave_no_overlap
+    is_valid, err_msg = validate_leave_no_overlap(
+        body.start_date,
+        body.end_date,
+        existing.data or []
+    )
+    if not is_valid:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=err_msg
+        )
+
     response = (
         supabase.table("leave_requests")
         .insert(

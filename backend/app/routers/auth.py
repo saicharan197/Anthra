@@ -115,14 +115,26 @@ async def signin(body: SignInRequest):
         .maybe_single()
         .execute()
     )
-    profile = profile_resp.data or {}
+    # Fetch the full profile for the response
+    profile_data = {}
+    try:
+        profile_resp = (
+            supabase.table("profiles")
+            .select("*")
+            .eq("id", str(user.id))
+            .execute()
+        )
+        if profile_resp and profile_resp.data:
+            profile_data = profile_resp.data[0]
+    except Exception:
+        profile_data = {}
 
     return AuthResponse(
         access_token=session.access_token,
         user={
             "id": str(user.id),
             "email": user.email,
-            "role": profile.get("role", "employee"),
-            "full_name": profile.get("full_name", ""),
+            "role": profile_data.get("role", "employee"),
+            "full_name": profile_data.get("full_name", body.email.split("@")[0]),
         },
     )

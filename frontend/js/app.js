@@ -6,10 +6,10 @@ import { initAuth, getCurrentUser, signIn, signUp, signOut, switchRole, onRoleCh
 import { showToast, getGreeting, todayISO, fmtDate } from './ui.js';
 import { initDB } from './offline-db.js';
 import { initNetworkListeners, updateNetworkBadge, processSyncQueue, onSyncComplete } from './offline-sync.js';
-import { renderAttendanceView, handleCheckIn, handleCheckOut, getAttendanceStats } from './attendance.js';
-import { renderLeaveView, openApplyLeaveModal } from './leave.js';
-import { renderPayrollView, handleDownloadPDF } from './payroll.js';
-import { renderProfileView, handleProfileSave } from './profile.js';
+import { renderAttendanceView, initQRScanner, getAttendanceStats } from './attendance.js';
+import { renderLeaveView, initLeaveListeners } from './leave.js';
+import { renderPayrollView, initPayrollListeners } from './payroll.js';
+import { renderProfileView, initProfileListeners } from './profile.js';
 
 // ── State ────────────────────────────────────────────────────
 let _currentView = 'dashboard';
@@ -39,7 +39,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // 5. Register service worker
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('sw.js').catch(() => {});
+    navigator.serviceWorker.register('sw.js').catch(() => { });
   }
 });
 
@@ -99,7 +99,7 @@ function _bindNavEvents() {
     item.addEventListener('click', (e) => {
       e.preventDefault();
       const view = item.dataset.view;
-      if (view) _navigateTo(view);
+      if (view) navigateTo(view);
       // Close mobile sidebar
       document.getElementById('sidebar').classList.remove('open');
     });
@@ -120,43 +120,48 @@ function _bindNavEvents() {
   onRoleChange(() => _refreshCurrentView());
 }
 
-function _navigateTo(viewName) {
-  _currentView = viewName;
+export function navigateTo(view) {
+  _currentView = view;
+  const container = document.getElementById('main-content') || document.querySelector('main');
+  if (!container) return;
 
-  // Update active nav
-  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-  const activeNav = document.querySelector(`.nav-item[data-view="${viewName}"]`);
-  if (activeNav) activeNav.classList.add('active');
+  // Handles DOM mounting from templates directly
+  switch (view) {
+    case 'dashboard':
+      container.innerHTML = renderDashboardView();
+      initDashboardListeners();
+      break;
+    case 'attendance':
+      container.innerHTML = renderAttendanceView();
+      initQRScanner();
+      break;
+    case 'leave':
+      container.innerHTML = renderLeaveView();
+      initLeaveListeners();
+      break;
+    case 'payroll':
+      container.innerHTML = renderPayrollView();
+      initPayrollListeners();
+      break;
+    case 'profile':
+      container.innerHTML = renderProfileView();
+      initProfileListeners();
+      break;
+  }
+}
 
-  // Switch views
-  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-  const target = document.getElementById(`view-${viewName}`);
-  if (target) target.classList.add('active');
+function renderDashboardView() {
+  const temp = document.getElementById('view-template-dashboard');
+  return temp ? `<section class="view active" id="view-dashboard">${temp.innerHTML}</section>` : '';
+}
 
-  // Update topbar title
-  const titles = { dashboard: 'Dashboard', attendance: 'Attendance', leave: 'Leave Management', payroll: 'Payroll', profile: 'Profile' };
-  document.getElementById('view-title').textContent = titles[viewName] || viewName;
-
-  // Render the view
-  _renderView(viewName);
+function initDashboardListeners() {
+  _renderDashboard();
 }
 
 // ── Action Bindings ──────────────────────────────────────────
 
 function _bindActionEvents() {
-  // Attendance
-  document.getElementById('btn-manual-checkin').addEventListener('click', handleCheckIn);
-  document.getElementById('btn-manual-checkout').addEventListener('click', handleCheckOut);
-
-  // Leave
-  document.getElementById('btn-apply-leave').addEventListener('click', openApplyLeaveModal);
-
-  // Payroll PDF
-  document.getElementById('btn-download-pdf').addEventListener('click', handleDownloadPDF);
-
-  // Profile
-  document.getElementById('form-profile').addEventListener('submit', handleProfileSave);
-
   // Sync button
   document.getElementById('btn-sync').addEventListener('click', async () => {
     const btn = document.getElementById('btn-sync');
@@ -172,7 +177,7 @@ function _enterApp() {
   document.getElementById('auth-screen').classList.add('hidden');
   document.getElementById('app').classList.remove('hidden');
   _applyRoleClass();
-  _navigateTo('dashboard');
+  navigateTo('dashboard');
 }
 
 function _exitApp() {
@@ -181,34 +186,10 @@ function _exitApp() {
   document.body.classList.remove('is-admin');
 }
 
-// ── View Rendering ───────────────────────────────────────────
-
-function _renderView(viewName) {
-  _applyRoleClass();
-
-  switch (viewName) {
-    case 'dashboard':
-      _renderDashboard();
-      break;
-    case 'attendance':
-      renderAttendanceView();
-      break;
-    case 'leave':
-      renderLeaveView();
-      break;
-    case 'payroll':
-      renderPayrollView();
-      break;
-    case 'profile':
-      renderProfileView();
-      break;
-  }
-}
-
 function _refreshCurrentView() {
   _applyRoleClass();
   _updateUserDisplay();
-  _renderView(_currentView);
+  navigateTo(_currentView);
 }
 
 function _applyRoleClass() {

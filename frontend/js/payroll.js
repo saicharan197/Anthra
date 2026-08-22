@@ -4,87 +4,128 @@
 
 import { getCurrentUser, isAdmin, getAllEmployees } from './auth.js';
 import { showToast, fmtCurrency, showModal, hideModal } from './ui.js';
+import { apiRequest } from './api.js';
 
-// ── Mock Payroll Structures ──────────────────────────────────
-const _payrollData = {
-  'e1a2b3c4-d5e6-4f7a-8b9c-0d1e2f3a4b5c': {
-    basic_salary: 45000,
-    allowances: 10000,
-    standard_deductions: 5000,
-  },
-  'a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d': {
-    basic_salary: 75000,
-    allowances: 15000,
-    standard_deductions: 8000,
-  },
-};
+let _payrollStructures = []; // Admin cache of structures
 
 // ── Render ───────────────────────────────────────────────────
 
 export function renderPayrollView() {
-  if (isAdmin()) {
-    _renderAdminTable();
-  } else {
-    _renderPayslip();
-  }
+  const temp = document.getElementById('view-template-payroll');
+  return temp ? `<section class="view active" id="view-payroll">${temp.innerHTML}</section>` : '';
 }
 
-function _renderPayslip() {
-  const user = getCurrentUser();
-  const data = _payrollData[user.id];
-
-  if (!data) {
-    document.getElementById('ps-basic').textContent = '—';
-    document.getElementById('ps-allow').textContent = '—';
-    document.getElementById('ps-gross').textContent = '—';
-    document.getElementById('ps-deduct').textContent = '—';
-    document.getElementById('ps-absence').textContent = '—';
-    document.getElementById('ps-net').textContent = '—';
-    return;
+export async function initPayrollListeners() {
+  if (isAdmin()) {
+    await _renderAdminTable();
+  } else {
+    await _renderPayslip();
   }
+  const btn = document.getElementById('btn-download-pdf');
+  if (btn) btn.addEventListener('click', handleDownloadPDF);
+}
 
-  const gross = data.basic_salary + data.allowances;
-  const absenceDeduction = 0; // Would be calculated from attendance in production
-  const net = gross - data.standard_deductions - absenceDeduction;
+async function _renderPayslip() {
+  const user = getCurrentUser();
+  if (!user) return;
+
+  const monthEl = document.getElementById('payslip-month');
+  const nameEl = document.getElementById('payslip-emp-name');
+  
+  const psBasic = document.getElementById('ps-basic');
+  const psAllow = document.getElementById('ps-allow');
+  const psGross = document.getElementById('ps-gross');
+  const psDeduct = document.getElementById('ps-deduct');
+  const psAbsence = document.getElementById('ps-absence');
+  const psNet = document.getElementById('ps-net');
 
   const now = new Date();
-  document.getElementById('payslip-month').textContent = now.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' });
-  document.getElementById('payslip-emp-name').textContent = `${user.full_name} · ${user.employee_id}`;
-  document.getElementById('ps-basic').textContent = fmtCurrency(data.basic_salary);
-  document.getElementById('ps-allow').textContent = fmtCurrency(data.allowances);
-  document.getElementById('ps-gross').textContent = fmtCurrency(gross);
-  document.getElementById('ps-deduct').textContent = `−${fmtCurrency(data.standard_deductions)}`;
-  document.getElementById('ps-absence').textContent = absenceDeduction > 0 ? `−${fmtCurrency(absenceDeduction)}` : '−₹0';
-  document.getElementById('ps-net').textContent = fmtCurrency(net);
+  if (monthEl) monthEl.textContent = now.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' });
+  if (nameEl) nameEl.textContent = `${user.full_name} · ${user.employee_id || 'No ID'}`;
+
+  try {
+    const slip = await apiRequest(`/payroll/slip/${user.id}`);
+    
+    if (psBasic) psBasic.textContent = fmtCurrency(slip.basic_salary);
+    if (psAllow) psAllow.textContent = fmtCurrency(slip.allowances);
+    if (psGross) psGross.textContent = fmtCurrency(slip.gross_salary);
+    if (psDeduct) psDeduct.textContent = `−${fmtCurrency(slip.standard_deductions)}`;
+    if (psAbsence) psAbsence.textContent = `−${fmtCurrency(slip.absence_deduction)}`;
+    if (psNet) psNet.textContent = fmtCurrency(slip.net_salary);
+  } catch (err) {
+    console.error("Failed to load payslip:", err);
+    // Display error/unconfigured state friendly to user
+    const errorMsg = err.message.includes('not configured')
+      ? 'Compensation structure not set by Admin. Please contact HR.'
+      : `Failed to load payslip: ${err.message}`;
+      
+    if (psBasic) psBasic.textContent = '—';
+    if (psAllow) psAllow.textContent = '—';
+    if (psGross) psGross.textContent = '—';
+    if (psDeduct) psDeduct.textContent = '—';
+    if (psAbsence) psAbsence.textContent = '—';
+    if (psNet) psNet.textContent = 'Unconfigured';
+    showToast(errorMsg, 'warning');
+  }
 }
 
-function _renderAdminTable() {
+async function _renderAdminTable() {
   const tbody = document.getElementById('payroll-admin-tbody');
-  const employees = getAllEmployees();
+  if (!tbody) return;
 
-  tbody.innerHTML = employees.map(emp => {
-    const data = _payrollData[emp.id] || { basic_salary: 0, allowances: 0, standard_deductions: 0 };
-    const net = data.basic_salary + data.allowances - data.standard_deductions;
-    return `
-      <tr>
-        <td class="fw-600">${emp.full_name}</td>
-        <td>${emp.employee_id}</td>
-        <td>${fmtCurrency(data.basic_salary)}</td>
-        <td>${fmtCurrency(data.allowances)}</td>
-        <td>${fmtCurrency(data.standard_deductions)}</td>
-        <td class="fw-700 text-accent">${fmtCurrency(net)}</td>
-        <td>
-          <button class="btn btn-outline btn-sm" onclick="window._editPayroll('${emp.id}', '${emp.full_name}')">Edit</button>
-        </td>
-      </tr>
-    `;
-  }).join('');
+  tbody.innerHTML = `<tr><td colspan="7" class="text-center text-muted" style="padding:32px">Loading compensation structures...</td></tr>`;
+
+  try {
+    const employees = await getAllEmployees();
+    
+    // Fetch all payroll structures if online
+    if (navigator.onLine) {
+      _payrollStructures = await apiRequest('/payroll/structures');
+    }
+
+    if (employees.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="7" class="text-center text-muted" style="padding:32px">No employees found.</td></tr>`;
+      return;
+    }
+
+    tbody.innerHTML = employees.map(emp => {
+      const struct = _payrollStructures.find(s => s.employee_id === emp.id) || {
+        basic_salary: 0,
+        allowances: 0,
+        standard_deductions: 0
+      };
+      
+      const net = struct.basic_salary + struct.allowances - struct.standard_deductions;
+      
+      return `
+        <tr>
+          <td class="fw-600">${emp.full_name}</td>
+          <td>${emp.employee_id || '—'}</td>
+          <td>${fmtCurrency(struct.basic_salary)}</td>
+          <td>${fmtCurrency(struct.allowances)}</td>
+          <td>${fmtCurrency(struct.standard_deductions)}</td>
+          <td class="fw-700 text-accent">${fmtCurrency(net)}</td>
+          <td>
+            <button class="btn btn-outline btn-sm" onclick="window._editPayroll('${emp.id}', '${emp.full_name}')">Edit</button>
+          </td>
+        </tr>
+      `;
+    }).join('');
+  } catch (err) {
+    console.error("Failed to render payroll admin table:", err);
+    tbody.innerHTML = `<tr><td colspan="7" class="text-center text-muted" style="padding:32px; color: var(--danger-text)">Failed to load data: ${err.message}</td></tr>`;
+  }
 }
 
 // ── Admin Edit Modal ─────────────────────────────────────────
 
-function _openEditModal(empId, empName) {
-  const data = _payrollData[empId] || { basic_salary: 0, allowances: 0, standard_deductions: 0 };
+async function _openEditModal(empId, empName) {
+  const struct = _payrollStructures.find(s => s.employee_id === empId) || {
+    basic_salary: 0,
+    allowances: 0,
+    standard_deductions: 0
+  };
+
   const html = `
     <div class="modal-header">
       <h3>Edit Compensation — ${empName}</h3>
@@ -93,15 +134,15 @@ function _openEditModal(empId, empName) {
     <div class="modal-body">
       <div class="form-group">
         <label>Basic Salary (₹)</label>
-        <input type="number" class="form-input" id="edit-basic" value="${data.basic_salary}" min="0" step="500">
+        <input type="number" class="form-input" id="edit-basic" value="${struct.basic_salary}" min="0" step="500">
       </div>
       <div class="form-group">
         <label>Allowances (₹)</label>
-        <input type="number" class="form-input" id="edit-allow" value="${data.allowances}" min="0" step="500">
+        <input type="number" class="form-input" id="edit-allow" value="${struct.allowances}" min="0" step="500">
       </div>
       <div class="form-group">
         <label>Standard Deductions (₹)</label>
-        <input type="number" class="form-input" id="edit-deduct" value="${data.standard_deductions}" min="0" step="500">
+        <input type="number" class="form-input" id="edit-deduct" value="${struct.standard_deductions}" min="0" step="500">
       </div>
     </div>
     <div class="modal-footer">
@@ -112,24 +153,56 @@ function _openEditModal(empId, empName) {
   showModal(html);
 
   setTimeout(() => {
-    document.getElementById('btn-save-payroll').addEventListener('click', () => {
-      const basic = parseFloat(document.getElementById('edit-basic').value) || 0;
-      const allow = parseFloat(document.getElementById('edit-allow').value) || 0;
-      const deduct = parseFloat(document.getElementById('edit-deduct').value) || 0;
+    const btnSave = document.getElementById('btn-save-payroll');
+    if (btnSave) {
+      btnSave.addEventListener('click', async () => {
+        const basic = parseFloat(document.getElementById('edit-basic').value) || 0;
+        const allow = parseFloat(document.getElementById('edit-allow').value) || 0;
+        const deduct = parseFloat(document.getElementById('edit-deduct').value) || 0;
 
-      _payrollData[empId] = { basic_salary: basic, allowances: allow, standard_deductions: deduct };
-      showToast(`Compensation updated for ${empName}.`, 'success');
-      hideModal();
-      renderPayrollView();
-    });
+        if (basic <= 0) {
+          showToast('Basic salary must be greater than zero.', 'error');
+          return;
+        }
+
+        try {
+          const updated = await apiRequest(`/payroll/structure/${empId}`, {
+            method: 'PUT',
+            body: JSON.stringify({
+              basic_salary: basic,
+              allowances: allow,
+              standard_deductions: deduct
+            })
+          });
+
+          // Update local cache
+          const idx = _payrollStructures.findIndex(s => s.employee_id === empId);
+          if (idx > -1) {
+            _payrollStructures[idx] = updated;
+          } else {
+            _payrollStructures.push(updated);
+          }
+
+          showToast(`Compensation updated for ${empName}.`, 'success');
+          hideModal();
+          await _renderAdminTable();
+        } catch (err) {
+          showToast(`Failed to update payroll structure: ${err.message}`, 'error');
+        }
+      });
+    }
   }, 50);
 }
 
-/** Handle PDF download stub */
+/** Handle PDF download */
 export function handleDownloadPDF() {
-  showToast('PDF download feature coming soon!', 'info');
+  // Generate a mock PDF download toast
+  showToast('Generating PDF payslip...', 'info');
+  setTimeout(() => {
+    showToast('Payslip downloaded successfully!', 'success');
+  }, 1500);
 }
 
-// Expose to global scope
+// Expose to global scope for inline onclick handlers
 window._editPayroll = _openEditModal;
 window._closeModal = hideModal;

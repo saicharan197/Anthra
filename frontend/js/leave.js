@@ -4,74 +4,97 @@
 
 import { getCurrentUser, isAdmin } from './auth.js';
 import { showToast, showModal, hideModal, fmtDate, uuid, businessDaysBetween } from './ui.js';
-import { enqueueAction } from './offline-db.js';
+import { enqueueAction, getPendingQueue } from './offline-db.js';
 import { updateNetworkBadge } from './offline-sync.js';
+import { apiRequest } from './api.js';
 
-// ── Mock Leave Data ─────────────────────────────────────────
-const _mockLeaves = [
-  {
-    id: uuid(),
-    employee_id: 'e1a2b3c4-d5e6-4f7a-8b9c-0d1e2f3a4b5c',
-    employee_name: 'Tharun R',
-    leave_type: 'Sick',
-    start_date: '2026-08-25',
-    end_date: '2026-08-26',
-    remarks: 'Feeling unwell, need rest.',
-    status: 'Pending',
-    admin_comments: '',
-    created_at: '2026-08-20T10:00:00Z',
-  },
-  {
-    id: uuid(),
-    employee_id: 'e1a2b3c4-d5e6-4f7a-8b9c-0d1e2f3a4b5c',
-    employee_name: 'Tharun R',
-    leave_type: 'Paid',
-    start_date: '2026-07-14',
-    end_date: '2026-07-18',
-    remarks: 'Family vacation planned.',
-    status: 'Approved',
-    admin_comments: 'Approved. Enjoy your trip!',
-    created_at: '2026-07-05T09:00:00Z',
-  },
-  {
-    id: uuid(),
-    employee_id: 'e1a2b3c4-d5e6-4f7a-8b9c-0d1e2f3a4b5c',
-    employee_name: 'Tharun R',
-    leave_type: 'Unpaid',
-    start_date: '2026-06-20',
-    end_date: '2026-06-20',
-    remarks: 'Personal errand.',
-    status: 'Rejected',
-    admin_comments: 'Too many leaves this month.',
-    created_at: '2026-06-18T11:00:00Z',
-  },
-];
-
-// ── Leave Balances (mock) ───────────────────────────────────
-const _balances = { paid: { total: 16, used: 4 }, sick: { total: 7, used: 1 }, unpaid: { total: Infinity, used: 0 } };
+let _leaves = [];
 
 // ── Render ───────────────────────────────────────────────────
 
 export function renderLeaveView() {
+  const temp = document.getElementById('view-template-leave');
+  return temp ? `<section class="view active" id="view-leave">${temp.innerHTML}</section>` : '';
+}
+
+export async function initLeaveListeners() {
+  await _loadLeaves();
   _renderBalances();
   _renderTable();
+  const btn = document.getElementById('btn-apply-leave');
+  if (btn) btn.addEventListener('click', openApplyLeaveModal);
+}
+
+/** Load leave requests from backend API or IndexedDB */
+async function _loadLeaves() {
+  if (navigator.onLine) {
+    try {
+      const data = await apiRequest('/leave/all');
+      _leaves = data || [];
+    } catch (err) {
+      console.warn("Failed to fetch leaves from API:", err);
+    }
+  }
+
+  // Merge queued offline items so they appear immediately in UI
+  try {
+    const queue = await getPendingQueue();
+    const user = getCurrentUser();
+    queue.forEach(item => {
+      if (item.type === 'leave_apply') {
+        _leaves.unshift({
+          id: item.client_event_id,
+          employee_id: user.id,
+          employee_name: user.full_name,
+          leave_type: item.payload.leave_type,
+          start_date: item.payload.start_date,
+          end_date: item.payload.end_date,
+          remarks: item.payload.remarks,
+          status: 'Pending',
+          admin_comments: '',
+          created_at: item.timestamp,
+          pending: true
+        });
+      }
+    });
+  } catch (err) {
+    console.error("Failed to load pending queue in leaves:", err);
+  }
 }
 
 function _renderBalances() {
-  document.getElementById('lb-paid').textContent = _balances.paid.total - _balances.paid.used;
-  document.getElementById('lb-sick').textContent = _balances.sick.total - _balances.sick.used;
-  document.getElementById('lb-unpaid').textContent = '∞';
+  // Paid leave balance starts at 16. Calculate based on Approved Paid leaves.
+  const approvedPaidLeaves = _leaves.filter(l => l.leave_type === 'Paid' && l.status === 'Approved');
+  let usedPaid = 0;
+  approvedPaidLeaves.forEach(l => {
+    usedPaid += businessDaysBetween(l.start_date, l.end_date);
+  });
+
+  // Sick leave balance starts at 7.
+  const approvedSickLeaves = _leaves.filter(l => l.leave_type === 'Sick' && l.status === 'Approved');
+  let usedSick = 0;
+  approvedSickLeaves.forEach(l => {
+    usedSick += businessDaysBetween(l.start_date, l.end_date);
+  });
+
+  const lbPaid = document.getElementById('lb-paid');
+  const lbSick = document.getElementById('lb-sick');
+  if (lbPaid) lbPaid.textContent = 16 - usedPaid;
+  if (lbSick) lbSick.textContent = 7 - usedSick;
 }
 
 function _renderTable() {
   const tbody = document.getElementById('leave-tbody');
+  if (!tbody) return;
+
   const admin = isAdmin();
   const user = getCurrentUser();
 
   const records = admin
-    ? [..._mockLeaves]
-    : _mockLeaves.filter(l => l.employee_id === user.id);
+    ? [..._leaves]
+    : _leaves.filter(l => l.employee_id === user.id);
 
+  // Sort by date descending
   records.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
   if (records.length === 0) {
@@ -82,23 +105,30 @@ function _renderTable() {
   tbody.innerHTML = records.map(l => {
     const days = businessDaysBetween(l.start_date, l.end_date);
     const statusClass = l.status.toLowerCase();
+    const pendingLabel = l.pending ? ' <small class="text-muted">(queued)</small>' : '';
+    
+    let actionsHtml = '<span class="text-muted text-sm">Done</span>';
+    if (l.status === 'Pending') {
+      if (l.pending) {
+        actionsHtml = '<span class="text-muted text-sm">Queued offline</span>';
+      } else {
+        actionsHtml = `
+          <button class="btn btn-accent btn-sm" onclick="window._leaveApprove('${l.id}')">Approve</button>
+          <button class="btn btn-danger btn-sm" onclick="window._leaveReject('${l.id}')" style="margin-left:6px">Reject</button>
+        `;
+      }
+    }
+
     return `
       <tr>
-        ${admin ? `<td class="fw-600">${l.employee_name}</td>` : ''}
+        ${admin ? `<td class="fw-600">${l.employee_name || '—'}</td>` : ''}
         <td>${l.leave_type}</td>
         <td>${fmtDate(l.start_date)}</td>
         <td>${fmtDate(l.end_date)}</td>
         <td class="fw-600">${days}</td>
         <td class="text-sm">${l.remarks || '—'}</td>
-        <td><span class="badge badge-${statusClass}">${l.status}</span></td>
-        ${admin ? `
-          <td>
-            ${l.status === 'Pending' ? `
-              <button class="btn btn-accent btn-sm" onclick="window._leaveApprove('${l.id}')">Approve</button>
-              <button class="btn btn-danger btn-sm" onclick="window._leaveReject('${l.id}')" style="margin-left:6px">Reject</button>
-            ` : '<span class="text-muted text-sm">Done</span>'}
-          </td>
-        ` : ''}
+        <td><span class="badge badge-${statusClass}">${l.status}</span>${pendingLabel}</td>
+        ${admin ? `<td>${actionsHtml}</td>` : ''}
       </tr>
     `;
   }).join('');
@@ -179,52 +209,89 @@ async function _submitLeave() {
     return;
   }
 
-  const user = getCurrentUser();
-  const leave = {
-    id: uuid(),
-    employee_id: user.id,
-    employee_name: user.full_name,
-    leave_type: type,
-    start_date: start,
-    end_date: end,
-    remarks,
-    status: 'Pending',
-    admin_comments: '',
-    created_at: new Date().toISOString(),
-  };
+  // ── Frontend Conflict Validation ───────────────────────────
+  const newStart = new Date(start);
+  const newEnd = new Date(end);
+  const overlap = _leaves.some(l => {
+    if (l.status === 'Rejected') return false;
+    const extStart = new Date(l.start_date);
+    const extEnd = new Date(l.end_date);
+    return Math.max(newStart, extStart) <= Math.min(newEnd, extEnd);
+  });
 
-  _mockLeaves.push(leave);
+  if (overlap) {
+    showToast("Leave request dates overlap with an existing request.", 'error');
+    return;
+  }
 
   if (!navigator.onLine) {
+    // Queue offline action
     await enqueueAction('leave_apply', { leave_type: type, start_date: start, end_date: end, remarks });
     await updateNetworkBadge();
+    showToast('Offline leave application queued.', 'warning');
   } else {
-    showToast('Leave request submitted!', 'success');
+    try {
+      await apiRequest('/leave/apply', {
+        method: 'POST',
+        body: JSON.stringify({
+          leave_type: type,
+          start_date: start,
+          end_date: end,
+          remarks
+        })
+      });
+      showToast('Leave request submitted successfully!', 'success');
+    } catch (err) {
+      showToast(`Submission failed: ${err.message}`, 'error');
+      return;
+    }
   }
 
   hideModal();
-  renderLeaveView();
+  await initLeaveListeners();
 }
 
 // ── Admin Actions ────────────────────────────────────────────
 
-function _approveLeave(id) {
-  const leave = _mockLeaves.find(l => l.id === id);
-  if (leave) {
-    leave.status = 'Approved';
-    leave.admin_comments = 'Approved by admin.';
+async function _approveLeave(id) {
+  const comments = window.prompt("Enter admin approval comments (optional):", "Approved by admin.");
+  if (comments === null) return; // cancel click
+
+  try {
+    await apiRequest(`/leave/${id}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify({
+        status: 'Approved',
+        admin_comments: comments
+      })
+    });
     showToast('Leave request approved.', 'success');
-    renderLeaveView();
+    await initLeaveListeners();
+  } catch (err) {
+    showToast(`Approval failed: ${err.message}`, 'error');
   }
 }
 
-function _rejectLeave(id) {
-  const leave = _mockLeaves.find(l => l.id === id);
-  if (leave) {
-    leave.status = 'Rejected';
-    leave.admin_comments = 'Rejected by admin.';
+async function _rejectLeave(id) {
+  const comments = window.prompt("Enter admin rejection comments (mandatory):");
+  if (comments === null) return; // cancel click
+  if (!comments.trim()) {
+    showToast('Rejection comments are required.', 'error');
+    return;
+  }
+
+  try {
+    await apiRequest(`/leave/${id}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify({
+        status: 'Rejected',
+        admin_comments: comments
+      })
+    });
     showToast('Leave request rejected.', 'info');
-    renderLeaveView();
+    await initLeaveListeners();
+  } catch (err) {
+    showToast(`Rejection failed: ${err.message}`, 'error');
   }
 }
 

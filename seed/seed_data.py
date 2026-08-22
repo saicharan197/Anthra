@@ -12,11 +12,11 @@ from dotenv import load_dotenv
 from supabase import create_client, Client
 
 # Resolve and load .env from the project root
-_ENV_FILE = Path(__file__).resolve().parents[2] / ".env"
+_ENV_FILE = Path(__file__).resolve().parents[1] / ".env"
 load_dotenv(str(_ENV_FILE))
 
 SUPABASE_URL = "https://yrjiiacdxknesvpaxdjr.supabase.co"
-SUPABASE_ANON_KEY = os.environ.get("SUPABASE_ANON_KEY")
+SUPABASE_ANON_KEY = os.getenv("SUPABASE_ANON_KEY")
 
 if not SUPABASE_ANON_KEY:
     raise ValueError("SUPABASE_ANON_KEY environment variable is not set.")

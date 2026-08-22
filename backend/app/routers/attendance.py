@@ -93,10 +93,19 @@ async def check_out(current_user: dict = Depends(get_current_user)):
             detail="No check-in found for today. Please check in first.",
         )
 
-    # Update with check-out time
+    check_in_dt = datetime.fromisoformat(existing.data["check_in_time"])
+    check_out_dt = now
+
+    from app.services.attendance_engine import calculate_daily_status
+    status_str, _ = calculate_daily_status(check_in_dt, check_out_dt, is_on_leave=False)
+
+    # Update with check-out time and status
     response = (
         supabase.table("attendance")
-        .update({"check_out_time": now.isoformat()})
+        .update({
+            "check_out_time": now.isoformat(),
+            "status": status_str
+        })
         .eq("id", existing.data["id"])
         .execute()
     )

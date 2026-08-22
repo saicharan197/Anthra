@@ -185,10 +185,11 @@
       </header>
 
       <!-- Content Area -->
-      <main class="content-area">
-
-        <!-- ───────── DASHBOARD VIEW ───────── -->
-        <section id="view-dashboard" class="view active">
+      <main class="content-area" id="main-content"></main>
+      
+      <div id="view-templates" class="hidden">
+        <template id="view-template-dashboard">
+          <section id="view-dashboard" class="view">
           <div class="welcome-banner">
             <h2 id="welcome-msg">Good Morning, Tharun 👋</h2>
             <p>Here's your workday overview for <span id="dashboard-date"></span></p>
@@ -263,9 +264,11 @@
             </div>
           </div>
         </section>
-
+        </template>
+        
         <!-- ───────── ATTENDANCE VIEW ───────── -->
-        <section id="view-attendance" class="view">
+        <template id="view-template-attendance">
+          <section id="view-attendance" class="view">
           <div class="view-header">
             <h2>Attendance</h2>
           </div>
@@ -349,9 +352,11 @@
             </div>
           </div>
         </section>
-
+        </template>
+        
         <!-- ───────── LEAVE VIEW ───────── -->
-        <section id="view-leave" class="view">
+        <template id="view-template-leave">
+          <section id="view-leave" class="view">
           <div class="view-header">
             <h2>Leave Management</h2>
             <button class="btn btn-primary" id="btn-apply-leave">+ Apply for Leave</button>
@@ -403,9 +408,11 @@
             </div>
           </div>
         </section>
-
+        </template>
+        
         <!-- ───────── PAYROLL VIEW ───────── -->
-        <section id="view-payroll" class="view">
+        <template id="view-template-payroll">
+          <section id="view-payroll" class="view">
           <div class="view-header">
             <h2>Payroll</h2>
           </div>
@@ -472,9 +479,11 @@
             </div>
           </div>
         </section>
-
+        </template>
+        
         <!-- ───────── PROFILE VIEW ───────── -->
-        <section id="view-profile" class="view">
+        <template id="view-template-profile">
+          <section id="view-profile" class="view">
           <div class="view-header">
             <h2>Profile</h2>
           </div>
@@ -530,13 +539,27 @@
                     </select>
                   </div>
                 </div>
+                <div class="form-row">
+                  <div class="form-group">
+                    <label>Basic Salary (₹)</label>
+                    <input type="number" class="form-input" id="pf-salary" placeholder="45000" min="0">
+                  </div>
+                  <div class="form-group">
+                    <label>Allowances (₹)</label>
+                    <input type="number" class="form-input" id="pf-allowances" placeholder="10000" min="0">
+                  </div>
+                  <div class="form-group">
+                    <label>Deductions (₹)</label>
+                    <input type="number" class="form-input" id="pf-deductions" placeholder="5000" min="0">
+                  </div>
+                </div>
               </div>
               <button type="submit" class="btn btn-primary">Save Changes</button>
             </form>
           </div>
         </section>
-
-      </main>
+        </template>
+      </div>
     </div>
   </div>
 

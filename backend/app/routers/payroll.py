@@ -173,3 +173,55 @@ def _business_days_in_month(year: int, month: int) -> int:
         if weekday < 5:  # 0=Mon … 4=Fri
             count += 1
     return count
+
+
+# ─── LIST ALL PAYROLL STRUCTURES (admin) ───────────────────────────
+
+@router.get(
+    "/structures",
+    response_model=list[PayrollStructureOut],
+    summary="Admin: list all payroll structures",
+)
+async def list_all_structures(_admin: dict = Depends(require_admin)):
+    """
+    Returns all payroll structures. Admin only.
+    """
+    response = supabase.table("payroll_structures").select("*").execute()
+    return response.data or []
+
+
+# ─── GET PAYROLL STRUCTURE (admin / own) ─────────────────────────────
+
+@router.get(
+    "/structure/{employee_id}",
+    response_model=PayrollStructureOut,
+    summary="Get employee's payroll structure",
+)
+async def get_payroll_structure(
+    employee_id: str,
+    current_user: dict = Depends(get_current_user),
+):
+    """
+    Returns the payroll structure for a specific employee.
+    Accessible by admin or the employee themselves.
+    """
+    if current_user.get("role") != "admin" and current_user["id"] != employee_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You can only view your own payroll structure.",
+        )
+
+    response = (
+        supabase.table("payroll_structures")
+        .select("*")
+        .eq("employee_id", employee_id)
+        .maybe_single()
+        .execute()
+    )
+    if not response.data:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Payroll structure not found.",
+        )
+    return response.data
+

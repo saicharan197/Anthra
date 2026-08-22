@@ -114,11 +114,36 @@ def _sync_check_out(employee_id: str, idempotency_key: str, payload: dict) -> Sy
     record_date = payload.get("date", datetime.now(timezone.utc).date().isoformat())
     check_out_time = payload.get("check_out_time", datetime.now(timezone.utc).isoformat())
 
-    response = (
+    # Find the existing check-in to get check_in_time
+    existing = (
         supabase.table("attendance")
-        .update({"check_out_time": check_out_time})
+        .select("*")
         .eq("employee_id", employee_id)
         .eq("date", record_date)
+        .maybe_single()
+        .execute()
+    )
+
+    if not existing.data:
+        return SyncResultItem(
+            client_event_id=idempotency_key,
+            status="error",
+            detail="No matching check-in found for the given date.",
+        )
+
+    check_in_dt = datetime.fromisoformat(existing.data["check_in_time"])
+    check_out_dt = datetime.fromisoformat(check_out_time)
+
+    from app.services.attendance_engine import calculate_daily_status
+    status_str, _ = calculate_daily_status(check_in_dt, check_out_dt, is_on_leave=False)
+
+    response = (
+        supabase.table("attendance")
+        .update({
+            "check_out_time": check_out_time,
+            "status": status_str
+        })
+        .eq("id", existing.data["id"])
         .execute()
     )
 
@@ -126,7 +151,7 @@ def _sync_check_out(employee_id: str, idempotency_key: str, payload: dict) -> Sy
         return SyncResultItem(
             client_event_id=idempotency_key,
             status="error",
-            detail="No matching check-in found for the given date.",
+            detail="Failed to update check-out status.",
         )
 
     return SyncResultItem(client_event_id=idempotency_key, status="created")

@@ -102,3 +102,19 @@ async def update_profile_admin(
         )
 
     return response.data[0]
+
+
+# ─── LIST ALL PROFILES (admin) ──────────────────────────────────────
+
+@router.get(
+    "",
+    response_model=list[ProfileOut],
+    summary="Admin: list all profiles",
+)
+async def list_all_profiles(_admin: dict = Depends(require_admin)):
+    """
+    Returns a list of all employee profiles. Admin only.
+    """
+    response = supabase.table("profiles").select("*").execute()
+    return response.data or []
+
